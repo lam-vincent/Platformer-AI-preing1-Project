@@ -1,238 +1,254 @@
 # Sprites du chevalier réalisées par Luiz Melo
 # https://assetstore.unity.com/packages/2d/characters/hero-knight-167779
 
-import pygame, sys
+import pygame, sys, math
 
-            # ------------------ #
-            #     Constantes     #
-            # ------------------ #
+# Constantes
 SCREEN_SIZE = (700, 500)
+CHUNK_SIZE = 8
+BLOCK_SIZE = 32
 
 DARK_GREY = (35, 39, 42)
-WHITE = (255, 255, 255)
 
 PLAYER_WIDTH = 47
 PLAYER_HEIGHT = 65
+JUMP_HEIGHT = 65
+ACCELERATION = 0.3
 
 MAX_FPS = 60
 ANIMATION_FPS = 12
 ANIMATION_REFRESH_RATE = MAX_FPS // ANIMATION_FPS
-            # ------------------ #
-            #   Initialisation   #
-            # ------------------ #
+
+trueScroll = [0, 0] # Variable globale pour la position de la caméra
+gameMap = {} # Variable globale pour la map
+
+# Initialisation
 pygame.init()
-screen = pygame.display.set_mode(SCREEN_SIZE) # Définition de la fenêtre de jeu
-pygame.display.set_caption("Jeu")
+screen = pygame.display.set_mode(SCREEN_SIZE)
+pygame.display.set_caption("Jeu de plateforme")
 clock = pygame.time.Clock()
 
-# Chargement des sprites dans des listes
-player_idle = []
-player_walk_right = []
-player_jump = []
-player_fall = []
-for i in range(11):
-    player_idle.append(pygame.image.load("assets/knight/idle/idle_" + str(i) + ".png"))
-for i in range(8):
-    player_walk_right.append(pygame.image.load("assets/knight/run/run_" + str(i) + ".png"))
-for i in range(3):
-    player_jump.append(pygame.image.load("assets/knight/jump/jump_" + str(i) + ".png"))
-for i in range(3):
-    player_fall.append(pygame.image.load("assets/knight/fall/fall_" + str(i) + ".png"))
+# Chargement des sprites
+def loadKnightSpirtes(spriteName, spriteCount): # du joueur
+    spriteList = []
+    spriteTemplate = "assets/knight/{0}/{0}_{1!s}.png"
+    for i in range(spriteCount):
+        spriteList.append(pygame.image.load(spriteTemplate.format(spriteName, i)))
 
-# Position, vitesse du joueur
-player_x = 300
-player_y = 0
-player_speed = 0
-player_acceleration = 0.2
+    return spriteList
 
-# Compteur pour les frames d'animation, et booléens pour savoir où le joueur regarde (pour animer du bon côté)
-player_walk_count = 0
-player_idle_count = 0
-player_jump_count = 0
-player_fall_count = 0
+idleSprites = loadKnightSpirtes("idle", 11)
+walkSprites = loadKnightSpirtes("run", 8)
+jumpSprites = loadKnightSpirtes("jump", 3)
+fallSprites = loadKnightSpirtes("fall", 3)
 
-player_left = False
-player_right = False
-player_last_direction = "right"
-player_on_ground = False
+def loadPlatformSprites(spriteName): # des plateformes
+    spriteTemplate = "assets/platform/{0}.png"
+    return pygame.image.load(spriteTemplate.format(spriteName))
 
-# Plateformes
-platforms = [
-    pygame.Rect(100, 300, 400, 50),
-    pygame.Rect(100, 250 ,50, 50),
-    pygame.Rect(450, 250, 50, 50)
-]
+platformSprites = {1: loadPlatformSprites("platform"), 2: loadPlatformSprites("underPlatform")}
 
-# Définition de la fonction pour afficher la fenêtre de jeu
-def draw():
-    global player_walk_count
-    global player_idle_count
-    global player_jump_count
-    global player_fall_count
+# Fonctions utilisées dans le fonctionnement du jeu
+def generateChunk(x, y):
+    chunkData = []
+    for yPos in range(CHUNK_SIZE): # On passe dans chaque y et x d'un chunk
+        for xPos in range(CHUNK_SIZE):
+            platformX = x * CHUNK_SIZE + xPos # On multiplie par CHUNK_SIZE pour arriver aux "vraies" coordonnées du bloc ciblé.
+            platformY = y * CHUNK_SIZE + yPos
+            tileType = 0
+            if platformY > 10:
+                tileType = 2
+            elif platformY == 10:
+                tileType = 1
+            if tileType != 0:
+                chunkData.append([[platformX, platformY], tileType])
+    return chunkData
 
-    # Background
+def collisionTest(rect, platforms):
+    hitList = []
+    for platform in platforms:
+        if rect.colliderect(platform):
+            hitList.append(platform)
+
+    return hitList
+
+def move(rect, movement, platforms):
+    collisionTypes = {'top': False, 'bottom': False, 'left': False, 'right': False}
+
+    # On vérifie les collisions en déplaçant d'abord en x, puis en y
+    rect.x += movement[0]
+    hitList = collisionTest(rect, platforms)
+    for platform in hitList:
+        if movement[0] > 0:
+            rect.right = platform.left
+            collisionTypes['right'] = True
+        elif movement[0] < 0:
+            rect.left = platform.right
+            collisionTypes['left'] = True
+
+    rect.y += movement[1]
+    hitList = collisionTest(rect, platforms)
+    for platform in hitList:
+        if movement[1] > 0:
+            rect.bottom = platform.top
+            collisionTypes['bottom'] = True
+        elif movement[1] < 0:
+            rect.top = platform.bottom
+            collisionTypes['top'] = True 
+
+    return rect, collisionTypes
+
+# Classe de joueur
+class Player:
+    def __init__(self):
+        # Hitbox du joueur (au passage on récupèrera les coordonnées du rect pour récupérer les coordonnées du joueur)
+        self.rect = pygame.Rect(350, 0, PLAYER_WIDTH, PLAYER_HEIGHT)
+
+        # Vitesse horizontale, mouvement du joueur
+        self.ySpeed = 0
+        self.movement = [0, 0]
+
+        # Compteurs de frame pour chaque animation
+        self.walkCount = 0
+        self.idleCount = 0
+        self.jumpCount = 0
+        self.fallCount = 0
+
+        self.lastDirection = ""
+        self.onGround = False
+        self.airTime = 0
+
+player = Player()
+
+# Fonction d'affichage à l'écran
+def display(scroll):
+    global player # On global player pour modifier (uniquement les compteurs de frames)
+
+    # On remplit l'écran de gris foncé pour qu'une frame ne persiste pas sur la frame suivante
     screen.fill(DARK_GREY)
 
-    # Plateformes
-    for p in platforms:
-        pygame.draw.rect(screen, WHITE, p)
-    
     # Affichage du joueur
-    if player_walk_count + 1 >= 8 * ANIMATION_REFRESH_RATE: # Pour éviter d'avoir de l'index out of range et que l'animation loop correctement
-        player_walk_count = 0
-    if player_idle_count + 1 >= 11 * ANIMATION_REFRESH_RATE:
-        player_idle_count = 0
-    if player_jump_count + 1 >= 3 * ANIMATION_REFRESH_RATE:
-        player_jump_count = 0
-    if player_fall_count + 1 >= 3 * ANIMATION_REFRESH_RATE:
-        player_fall_count = 0
+    # On loop les sprites (comme un GIF quoi)
+    if player.walkCount + 1 >= 8 * ANIMATION_REFRESH_RATE:
+        player.walkCount = 0
+    if player.idleCount + 1 >= 11 * ANIMATION_REFRESH_RATE:
+        player.idleCount = 0
+    if player.jumpCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
+        player.jumpCount = 0
+    if player.fallCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
+        player.fallCount = 0
 
-    if player_left: # S'il va vers la gauche (marche ou saut)
-        usedList = player_walk_right # On utilise une variable qu'on fera varier selon les cas, pour éviter de réécrire la fonction qu'on va appeler trois fois
-        usedCount = player_walk_count # La même chose mais pour le compteur de /5 de frames
-        if not player_on_ground: # S'il est dans les airs, on utilise la sprite du saut ou de la chute
-            if player_speed <= 0:
-                usedList = player_jump
-                usedCount = player_jump_count
-            else:
-                usedList = player_fall
-                usedCount = player_fall_count
-        screen.blit(pygame.transform.flip(usedList[usedCount // ANIMATION_REFRESH_RATE], True, False), (player_x, player_y)) # Divison euclidienne par 5 pour qu'il y ait une sprite toutes les 5 secondes, soit un framerate d'animation à 12FPS (60 / 5) 
-        
-        if not player_on_ground: # Aller à 1/5 de la frame suivante
-            if player_speed <= 0:
-                player_jump_count += 1
-            else:
-                player_fall_count += 1
-        else:
-            player_walk_count += 1
-    elif player_right: # Same mais à droite
-        usedList = player_walk_right
-        usedCount = player_walk_count
-        if not player_on_ground:
-            if player_speed <= 0:
-                usedList = player_jump
-                usedCount = player_jump_count
-            else:
-                usedList = player_fall
-                usedCount = player_fall_count
-        screen.blit(usedList[usedCount // ANIMATION_REFRESH_RATE], (player_x, player_y))
-        
-        if not player_on_ground:
-            if player_speed <= 0:
-                player_jump_count += 1
-            else:
-                player_fall_count += 1
-        else:
-            player_walk_count += 1
+    # Choix des sprites idle ou walk selon sa vitesse horizontale
+    if player.movement[0] == 0:
+        usedSprites = idleSprites # On utilise une variable qu'on fera varier selon les cas, pour éviter de réécrire la fonction qu'on va appeler plusieurs fois
+        usedCount = player.idleCount
     else:
-        usedList = player_idle
-        usedCount = player_idle_count
-        if not player_on_ground:
-            if player_speed <= 0:
-                usedList = player_jump
-                usedCount = player_jump_count
-            else:
-                usedList = player_fall
-                usedCount = player_fall_count
-        if player_last_direction == "left": # On vérifie sa dernière direction pour éviter que la sprite se retourne subitement
-            screen.blit(pygame.transform.flip(usedList[usedCount // ANIMATION_REFRESH_RATE], True, False), (player_x, player_y))
+        usedSprites = walkSprites 
+        usedCount = player.walkCount
+    if not player.onGround:
+        if player.ySpeed <= 0:
+            usedSprites = jumpSprites
+            usedCount = player.jumpCount
         else:
-            screen.blit(usedList[usedCount // ANIMATION_REFRESH_RATE], (player_x, player_y))
+            usedSprites = fallSprites
+            usedCount = player.fallCount
 
-        if not player_on_ground:
-            if player_speed <= 0:
-                player_jump_count += 1
-            else:
-                player_fall_count += 1
+    # Affichage des sprites, on inverse la sprite s'il regarde à gauche
+    if player.movement[0] < 0 or player.lastDirection == "left": # S'il va vers la gauche ou regarde vers la gauche
+        screen.blit(pygame.transform.flip(usedSprites[usedCount // ANIMATION_REFRESH_RATE], True, False), (player.rect.x - scroll[0], player.rect.y - scroll[1])) # Divison euclidienne par 5 pour qu'il y ait une sprite toutes les 5 frames, soit un framerate d'animation à 12FPS (60 / 5)
+    else:
+        screen.blit(usedSprites[usedCount // ANIMATION_REFRESH_RATE], (player.rect.x - scroll[0], player.rect.y - scroll[1]))
+
+    # On ajoute 1 au compteur de frame
+    if not player.onGround:
+        if player.ySpeed <= 0:
+            player.jumpCount += 1
         else:
-            player_idle_count += 1
+            player.fallCount += 1
+    else:
+        if player.movement[0] == 0:
+            player.idleCount += 1
+        else:
+            player.walkCount += 1
 
-    pygame.display.flip() # Afficher le tout
+    # Affichage des plateformes
+    for y in range(math.ceil(SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2): # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
+        for x in range(math.ceil(SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2): # seront affichés simultanément à l'écran
+            chunkX = x - 1 + int(round(scroll[0]/(CHUNK_SIZE * BLOCK_SIZE)))
+            chunkY = y - 1 + int(round(scroll[1]/(CHUNK_SIZE * BLOCK_SIZE)))
+            targetChunk = str(chunkX) + ";" + str(chunkY)
+            for platform in gameMap[targetChunk]:
+                screen.blit(platformSprites[platform[1]], (platform[0][0] * BLOCK_SIZE - scroll[0], platform[0][1] * BLOCK_SIZE - scroll[1]))
 
-            # ------------------- #
-            #    Boucle de jeu    #
-            # ------------------- #
+    pygame.display.flip()
+
+# Boucle de jeu
 running = True
 while running:
 
-            # ------------------- #
-            #        Input        #
-            # ------------------- #
+    # Camera
+    trueScroll[0] += (player.rect.x - trueScroll[0] - (SCREEN_SIZE[0] // 2 - PLAYER_WIDTH // 2))/20
+    trueScroll[1] += (player.rect.y - trueScroll[1] - (SCREEN_SIZE[1] // 2 - PLAYER_HEIGHT // 2))/20
+    scroll = trueScroll.copy()
+    scroll[0] = int(scroll[0])
+    scroll[1] = int(scroll[1])
 
-    # Quitter le jeu
+    # Plateformes & Chunks
+    platformHitboxes = []
+    for y in range(math.ceil(SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+        for x in range(math.ceil(SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+            chunkX = x - 1 + int(round(scroll[0]/(CHUNK_SIZE * BLOCK_SIZE)))
+            chunkY = y - 1 + int(round(scroll[1]/(CHUNK_SIZE * BLOCK_SIZE)))
+            targetChunk = str(chunkX) + ";" + str(chunkY)
+            if targetChunk not in gameMap:
+                gameMap[targetChunk] = generateChunk(chunkX, chunkY)
+            for platform in gameMap[targetChunk]:
+                if platform[1] in [1, 2]:
+                    platformHitboxes.append(pygame.Rect(platform[0][0] * BLOCK_SIZE, platform[0][1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+
+    # Input
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
             sys.exit()
 
-    new_player_x = player_x
-    new_player_y = player_y
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                player.movement[0] = -4
+                player.lastDirection = "left"
+        
+            if event.key == pygame.K_d:
+                player.movement[0] = 4
+                player.lastDirection = "right"
 
-    # Input de joueur
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_q]:
-        new_player_x -= 2
-        player_left = True
-        player_right = False
-        player_last_direction = "left"
-    elif keys[pygame.K_d]:
-        new_player_x += 2
-        player_left = False
-        player_right = True
-        player_last_direction = "right"
+            if event.key == pygame.K_SPACE and player.onGround and player.airTime < 6:
+                    player.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
+                    player.walkCount = 0
+                    player.onGround = False
+
+        if event.type == pygame.KEYUP:
+            if (player.movement[0] < 0 and event.key == pygame.K_q) or (player.movement[0] > 0 and event.key == pygame.K_d):
+                player.movement[0] = 0
+
+    # On applique la gravité au joueur
+    player.ySpeed += ACCELERATION
+    if player.ySpeed > 20: # et on la limite à 20 maximum
+        player.ySpeed = 20
+    if player.rect.y > SCREEN_SIZE[1] - PLAYER_HEIGHT: # Si jamais le joueur arrive en bas de l'écran
+        pass
+    player.movement[1] += player.ySpeed # On ajoute la vitesse à la position à chaque frame (pour que sa position en y soit polynômiale en fonction du temps)
+
+    player.rect, collisions = move(player.rect, player.movement, platformHitboxes)
+    player.movement[1] = 0
+    if collisions['bottom']: # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut
+        player.ySpeed = 0
+        player.airTime = 0
+        player.onGround = True
     else:
-        player_left = False
-        player_right = False
-        player_walk_count = 0
-    
-    if keys[pygame.K_SPACE] and player_on_ground:
-        player_speed = -5
-        player_left = False
-        player_right = False
-        player_walk_count = 0
-        player_on_ground = False
+        player.airTime += 1
 
-    # Mouvement horizontal
-    new_player_rect = pygame.Rect(new_player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    x_collision = False
+    display(scroll)
 
-    for p in platforms:
-        if p.colliderect(new_player_rect):
-            x_collision = True
-            break
+    clock.tick(MAX_FPS)
 
-    if x_collision == False:
-        player_x = new_player_x
-
-    # Mouvement vertical
-    player_speed += player_acceleration
-    new_player_y += player_speed
-
-    new_player_rect = pygame.Rect(player_x, new_player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    y_collision = False
-
-    for p in platforms:
-        if p.colliderect(new_player_rect):
-            y_collision = True
-            player_speed = 0
-            if p[1] > new_player_y: # On vérifie si le joueur est juste au-dessus de la plateforme
-                player_y = p[1] - PLAYER_HEIGHT # On le téléporte à la plateforme pour éviter que la vitesse soit à 0, et qu'il reprenne un peu de vitesse
-                player_on_ground = True
-                player_jump_count = 0
-                player_fall_count = 0
-            break
-
-    if y_collision == False:
-        player_y = new_player_y
-
-    if player_y > SCREEN_SIZE[1] - PLAYER_HEIGHT:
-        player_speed = -player_speed
-
-    # Afficher la fenêtre
-    draw()
-
-    clock.tick(MAX_FPS) # Forcer 60 FPS max
-
-# Quitter
 pygame.quit()
