@@ -40,6 +40,20 @@ pygame.display.set_caption("Jeu de plateforme")
 clock = pygame.time.Clock()
 font = pygame.font.Font(None, 64)
 
+mixer = pygame.mixer
+mixer.Channel(0).play(mixer.Sound('sounds/music.wav'), loops = -1)
+
+# Fonction pour jouer des sons
+def sound(name):
+    path = "sounds/{0}.wav"
+    mixer.find_channel().play(mixer.Sound(path.format(name)))
+
+def deathSound():
+    mixer.set_num_channels(0)
+    mixer.set_num_channels(1)
+    mixer.Channel(0).play(mixer.Sound('sounds/death2.wav'))
+    mixer.fadeout(8000)
+
 # Chargement des sprites
 def loadKnightSprites(spriteName, spriteCount): # du joueur
     spriteList = []
@@ -153,6 +167,7 @@ class Player:
         # Animation de mort
         self.dead = False
         self.deathAnimationPlayed = False
+        self.deathSoundPlayed = False
         self.deathCountdown = MAX_FPS * 25
 
         # Compteurs de frame pour chaque animation
@@ -162,6 +177,9 @@ class Player:
         self.fallCount = 0
         self.yDashCount = 0
         self.deathCount = 0
+
+        # Compteur pour les effets sonores
+        self.walkSoundCount = 0
 
         self.lastDirection = ""
         self.onGround = False
@@ -331,7 +349,9 @@ while running:
             if event.key == pygame.K_SPACE and player.onGround and player.airTime < 6: # Si le joueur est dans les airs depuis moins de 6 frames, il peut quand même sauter
                 player.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
                 player.walkCount = 0
+                player.walkSoundCount = 0
                 player.onGround = False
+                sound("jump")
 
         if event.type == pygame.KEYUP:
             if (player.movement[0] < 0 and event.key == pygame.K_q) or (player.movement[0] > 0 and event.key == pygame.K_d):
@@ -347,16 +367,21 @@ while running:
                     player.xDashCD = MAX_FPS
                     player.canXDash = False
                     player.canActivateArrows[0] = False
+                    sound("dashX")
                 if player.xDashCD > 0 and player.xDashCD < MAX_FPS - 1 and player.yDashCD == 0 and not player.onGround and player.airTime >= 14:
                     player.ySpeed = -10
                     player.yDashCD = player.xDashCD
                     player.canActivateArrows[1] = False
+                    sound("dashY")
 
     # On applique la gravité au joueur
     player.ySpeed += ACCELERATION
     if player.ySpeed > 20: # et on la limite à 20 maximum
         player.ySpeed = 20
     if player.rect.y > SCREEN_SIZE[1] - PLAYER_HEIGHT: # Si jamais le joueur arrive en bas de l'écran
+        if not player.deathSoundPlayed:
+            deathSound()
+            player.deathSoundPlayed = True
         player.dead = True
         player.movement[0] = 0
 
@@ -392,6 +417,16 @@ while running:
 
     player.movement[1] = 0
 
+    if player.movement[0] != 0 and player.onGround:
+        if player.walkSoundCount + 1 > 30:
+            player.walkSoundCount = 0
+        else:
+            player.walkSoundCount += 1
+        if player.walkSoundCount == 15:
+            sound("walk1")
+        if player.walkSoundCount == 30:
+            sound("walk2")
+
     # Calcul du score, traitement du compte à rebours de mort du joueur
     if not player.dead:
         seconds = pygame.time.get_ticks() // (1000/(MAX_FPS/60))
@@ -417,6 +452,9 @@ while running:
             score += 0.1
 
         if player.deathCountdown == 0:
+            if not player.deathSoundPlayed:
+                deathSound()
+                player.deathSoundPlayed = True
             player.dead = True
 
     display(cameraPos)
