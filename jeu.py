@@ -24,8 +24,10 @@ ANIMATION_FPS = MAX_FPS // 5
 ANIMATION_REFRESH_RATE = MAX_FPS // ANIMATION_FPS
 
 trueCameraPos = [0, 0] # Variable globale pour la position de la caméra
+
 seed = random.randint(0, 1 << 25)
 print("Seed =", seed)
+noise = perlin_noise.PerlinNoise(seed = seed) # Bruit de Perlin pour la génération aléatoire de la map
 gameMap = {} # Variable globale pour la map
 
 score = 0 # Le score de la partie
@@ -38,15 +40,16 @@ screen = pygame.display.set_mode(SCREEN_SIZE)
 window = pygame.display.set_mode(ACTUAL_SCREEN_SIZE)
 pygame.display.set_caption("Jeu de plateforme")
 clock = pygame.time.Clock()
-font = pygame.font.Font(None, 64)
+font = pygame.font.Font(None, math.floor(44 * ((ACTUAL_SCREEN_SIZE[0] + ACTUAL_SCREEN_SIZE[1])/2)/((700 + 500)/2)))
 
 mixer = pygame.mixer
 mixer.Channel(0).play(mixer.Sound('sounds/music.wav'), loops = -1)
 
 # Fonction pour jouer des sons
 def sound(name):
-    path = "sounds/{0}.wav"
-    mixer.find_channel().play(mixer.Sound(path.format(name)))
+    if not player.dead: # On ne veut pas qu'un son se joue si le joueur est dans l'écran de mort
+        path = "sounds/{0}.wav"
+        mixer.find_channel().play(mixer.Sound(path.format(name)))
 
 def deathSound():
     mixer.set_num_channels(0)
@@ -90,28 +93,30 @@ upArrow = loadAllArrows("up")
 # Fonctions utilisées dans le fonctionnement du jeu
 def generateChunk(x, y):
     chunkData = []
-    for yPos in range(CHUNK_SIZE): # On passe dans chaque y et x d'un chunk
-        for xPos in range(CHUNK_SIZE):
-            platformX = x * CHUNK_SIZE + xPos # On multiplie par CHUNK_SIZE pour arriver aux coordonnées du bloc ciblé (pas du pixel).
+    for xPos in range(CHUNK_SIZE):
+        platformX = x * CHUNK_SIZE + xPos # On multiplie par CHUNK_SIZE pour arriver aux coordonnées du bloc ciblé (pas du pixel).
+        tileType = 0
+        # Les facteurs platformFactor et holeFactor ne doivent pas aller au-delà de 3 ou la génération serait vraiment mauvaise
+        platformFactor = 1 + xMax / 7000 # platformFactor correspond à la dispersion des plateformes : plus il est élevé, plus les plateformes iront loin en haut et en bas
+        platformPrng = platformFactor ** 0.5 * -12 * noise(platformX/10) // 1 #PRNG pour Pseudo Random Number Generator
+        holeFactor = 1 + xMax / 7000 # holeFactor correspond à la présence de trous : plus il est élevé, plus il y a de trous
+        holePrng = math.floor(1/(holeFactor ** 2.5) * -100 * noise(platformX/10)) + 1
+
+        for yPos in range(CHUNK_SIZE): # On passe dans chaque y et x d'un chunk
             platformY = y * CHUNK_SIZE + yPos
-            tileType = 0
+
             if platformX == -1: # On veut créer un mur invisible à gauche
                 tileType = 1
                 chunkData.append([[platformX, platformY], tileType])
-            else:
-                noise = perlin_noise.PerlinNoise(seed = seed)
-                # Les facteurs platformFactor et holeFactor ne doivent pas aller au-delà de 3 ou la génération serait vraiment mauvaise
-                platformFactor = 1 + xMax / 7000 # platformFactor correspond à la dispersion des plateformes : plus il est élevé, plus les plateformes iront loin en haut et en bas
-                platformPrng = platformFactor ** 0.5 * -12 * noise(platformX/10) // 1 
-                holeFactor = 1 + xMax / 7000 # holeFactor correspond à la présence de trous : plus il est élevé, plus il y a de trous
-                holePrng = math.floor(1/(holeFactor ** 2.5) * -100 * noise(platformX/10)) + 1
-                if holePrng != 0:
-                    if platformY > platformPrng:
-                        tileType = 2
-                    elif platformY == platformPrng:
-                        tileType = 1
-                    if tileType != 0:
-                        chunkData.append([[platformX, platformY], tileType])
+
+            if holePrng == 0:
+                tileType = -1
+            elif platformY > platformPrng:
+                tileType = 2
+            elif platformY == platformPrng:
+                tileType = 1
+            chunkData.append([[platformX, platformY], tileType])
+                    
     return chunkData
 
 def collisionTest(rect, platforms):
@@ -220,11 +225,11 @@ def display(cameraPos):
         if player.fallCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
             player.fallCount = 0
 
-        if player.xDashCD >= 48: # Traitement à part des sprites de la phase de dash horizontale où le joueur prend de la vitesse
+        if player.xDashCD >= 48 * (MAX_FPS // 60): # Traitement à part des sprites de la phase de dash horizontale où le joueur prend de la vitesse
             if player.movement[0] < 0 or player.lastDirection == "left": # S'il va vers la gauche ou regarde vers la gauche
-                screen.blit(pygame.transform.flip(dashSprites[(MAX_FPS - player.xDashCD) // 2], True, False), (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1])) # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
+                screen.blit(pygame.transform.flip(dashSprites[math.floor((MAX_FPS - player.xDashCD) / (MAX_FPS / 30))], True, False), (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1])) # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
             else:
-                screen.blit(dashSprites[(MAX_FPS - player.xDashCD) // 2], (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
+                screen.blit(dashSprites[math.floor((MAX_FPS - player.xDashCD) / (MAX_FPS / 30))], (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
         elif not player.onGround and player.yDashCD > 0 and player.ySpeed <= 0:
             if player.yDashCount + 2 <= 12:
                 player.yDashCount += 2
@@ -272,12 +277,13 @@ def display(cameraPos):
                 chunkY = y - 1 + int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
                 targetChunk = str(chunkX) + ";" + str(chunkY)
                 for platform in gameMap[targetChunk]:
-                    screen.blit(platformSprites[platform[1]], (platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
+                    if platform[1] > 0:
+                        screen.blit(platformSprites[platform[1]], (platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
 
         # Affichage du compte à rebours de mort du joueur
         colorRect = pygame.Surface((2, 2))
         pygame.draw.line(colorRect, (222, 71, 71), (0, 0), (0, 1))
-        difference = (1500 - player.deathCountdown) / 1500 # On fait varier un "coefficient" de 0 à 1 pour maintenir une couleur cohérente sur la barre
+        difference = (MAX_FPS * 25 - player.deathCountdown) / (MAX_FPS * 25) # On fait varier un "coefficient" de 0 à 1 pour maintenir une couleur cohérente sur la barre
         pygame.draw.line(colorRect, (104 + math.floor((222 - 104) * difference), 222 - math.floor((222 - 71) * difference), 71), (1, 0), (1, 1))
         rectWidth = math.floor(ACTUAL_SCREEN_SIZE[0] // 2 * (player.deathCountdown / (MAX_FPS * 25)))
         if rectWidth < 0:
@@ -288,14 +294,16 @@ def display(cameraPos):
 
         # Affichage des flèches de dash
         arrowDisplayY = ACTUAL_SCREEN_SIZE[1] // 2 + 100
+        coordsLeft = ((ACTUAL_SCREEN_SIZE[0] - ARROW_SIZE) // 2 - ARROW_SIZE, arrowDisplayY)
+        coordsRight = ((ACTUAL_SCREEN_SIZE[0] + ARROW_SIZE) // 2, arrowDisplayY)
         if not player.canActivateArrows[0] or player.onGround:
-            screen.blit(rightArrow[0], ((ACTUAL_SCREEN_SIZE[0] - ARROW_SIZE) // 2 - ARROW_SIZE, arrowDisplayY))
+            screen.blit(rightArrow[0], coordsLeft)
         else:
-            screen.blit(rightArrow[1], ((ACTUAL_SCREEN_SIZE[0] - ARROW_SIZE) // 2 - ARROW_SIZE, arrowDisplayY))
+            screen.blit(rightArrow[1], coordsLeft)
         if not player.canActivateArrows[1] or player.onGround:
-            screen.blit(upArrow[0], ((ACTUAL_SCREEN_SIZE[0] + ARROW_SIZE) // 2, arrowDisplayY))
+            screen.blit(upArrow[0], coordsRight)
         else:
-            screen.blit(upArrow[1], ((ACTUAL_SCREEN_SIZE[0] + ARROW_SIZE) // 2, arrowDisplayY))
+            screen.blit(upArrow[1], coordsRight)
 
 
     window.blit(pygame.transform.scale(screen, ACTUAL_SCREEN_SIZE), (0, 0)) # On affiche l'écran à la taille indiquée
@@ -321,14 +329,14 @@ while running:
     # Plateformes & Chunks
     platformHitboxes = []
     for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+        chunkY = y - 1 + int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
         for x in range(math.ceil(ACTUAL_SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
             chunkX = x - 1 + int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
-            chunkY = y - 1 + int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
             targetChunk = str(chunkX) + ";" + str(chunkY)
             if targetChunk not in gameMap:
                 gameMap[targetChunk] = generateChunk(chunkX, chunkY)
             for platform in gameMap[targetChunk]:
-                if platform[1] in [1, 2]:
+                if platform[1] > 0:
                     platformHitboxes.append(pygame.Rect(platform[0][0] * BLOCK_SIZE, platform[0][1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
 
     # Input
@@ -422,9 +430,9 @@ while running:
             player.walkSoundCount = 0
         else:
             player.walkSoundCount += 1
-        if player.walkSoundCount == 15:
+        if player.walkSoundCount == 1:
             sound("walk1")
-        if player.walkSoundCount == 30:
+        if player.walkSoundCount == 16:
             sound("walk2")
 
     # Calcul du score, traitement du compte à rebours de mort du joueur
