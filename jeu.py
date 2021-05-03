@@ -29,8 +29,6 @@ screen = pygame.display.set_mode(SCREEN_SIZE)
 window = pygame.display.set_mode(ACTUAL_SCREEN_SIZE)
 pygame.display.set_caption("Jeu de plateforme")
 clock = pygame.time.Clock()
-font = pygame.font.Font(None, math.floor(
-    44 * ((ACTUAL_SCREEN_SIZE[0] + ACTUAL_SCREEN_SIZE[1])/2)/((700 + 500)/2)))
 
 mixer = pygame.mixer
 mixer.Channel(0).play(mixer.Sound('sounds/music.wav'), loops=-1)
@@ -49,26 +47,6 @@ def deathSound():
     mixer.set_num_channels(1)
     mixer.Channel(0).play(mixer.Sound('sounds/death2.wav'))
     mixer.fadeout(8000)
-
-# Chargement des sprites
-
-
-def loadKnightSprites(spriteName, spriteCount):  # du joueur
-    spriteList = []
-    spriteTemplate = "assets/knight/{0}/{0}_{1!s}.png"
-    for i in range(spriteCount):
-        spriteList.append(pygame.image.load(
-            spriteTemplate.format(spriteName, i)))
-
-    return spriteList
-
-
-idleSprites = loadKnightSprites("idle", 11)
-walkSprites = loadKnightSprites("run", 8)
-jumpSprites = loadKnightSprites("jump", 3)
-fallSprites = loadKnightSprites("fall", 3)
-dashSprites = loadKnightSprites("dash", 7)
-deathSprites = loadKnightSprites("death", 15)
 
 
 def loadPlatformSprites(spriteName):  # des plateformes
@@ -139,98 +117,11 @@ player = Player(350, -500)
 def display(cameraPos):
     # On global player pour modifier (uniquement les compteurs de frames)
     global player
+    # Affichage des plateformes
+    # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
+    player.display(screen, cameraPos, score)
 
-    if player.dead:
-        screen.fill(DARK_DARK_GREY)
-        if not player.deathAnimationPlayed:
-            if player.deathCount > 14 * (ANIMATION_REFRESH_RATE * 2):
-                player.deathAnimationPlayed = True
-            else:
-                screen.blit(deathSprites[player.deathCount // (ANIMATION_REFRESH_RATE * 2)], ((
-                    ACTUAL_SCREEN_SIZE[0] - player.width)/2, (ACTUAL_SCREEN_SIZE[1] - player.height)/2))
-                player.deathCount += 1
-        else:
-            # Ajouter un temps de pause
-            texte = "Score : " + str(int(score))
-            text = font.render(texte, True, (255, 255, 255))
-            textSize = font.size(texte)
-            screen.blit(text, ((
-                ACTUAL_SCREEN_SIZE[0] - textSize[0])/2, (ACTUAL_SCREEN_SIZE[1] - textSize[1])/2))
-    else:
-        # On remplit l'écran de gris foncé pour qu'une frame ne persiste pas sur la frame suivante
-        screen.fill(DARK_GREY)
-
-        # Affichage du joueur
-        # On loop les sprites (comme un GIF quoi)
-        if player.walkCount + 1 >= 8 * ANIMATION_REFRESH_RATE:
-            player.walkCount = 0
-        if player.idleCount + 1 >= 11 * ANIMATION_REFRESH_RATE:
-            player.idleCount = 0
-        if player.jumpCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
-            player.jumpCount = 0
-        if player.fallCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
-            player.fallCount = 0
-
-        # Traitement à part des sprites de la phase de dash horizontale où le joueur prend de la vitesse
-        if player.xDashCD >= 48 * (MAX_FPS // 60):
-            # S'il va vers la gauche ou regarde vers la gauche
-            if player.movement[0] < 0 or player.lastDirection == "left":
-                # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
-                screen.blit(pygame.transform.flip(dashSprites[math.floor((MAX_FPS - player.xDashCD) / (
-                    MAX_FPS / 30))], True, False), (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
-            else:
-                screen.blit(dashSprites[math.floor((MAX_FPS - player.xDashCD) / (
-                    MAX_FPS / 30))], (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
-        elif not player.onGround and player.yDashCD > 0 and player.ySpeed <= 0:
-            if player.yDashCount + 2 <= 12:
-                player.yDashCount += 2
-            if player.movement[0] < 0 or player.lastDirection == "left":
-                # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
-                screen.blit(pygame.transform.flip(
-                    dashSprites[player.yDashCount // 2], True, False), (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
-            else:
-                screen.blit(dashSprites[player.yDashCount // 2],
-                            (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
-        else:
-            # Choix des sprites idle ou walk selon sa vitesse horizontale
-            if not player.onGround:
-                if player.ySpeed <= 0:
-                    usedSprites = jumpSprites
-                    usedCount = player.jumpCount
-                else:
-                    usedSprites = fallSprites
-                    usedCount = player.fallCount
-            elif player.movement[0] == 0:
-                # On utilise une variable qu'on fera varier selon les cas, pour éviter de réécrire la fonction qu'on va appeler plusieurs fois
-                usedSprites = idleSprites
-                usedCount = player.idleCount
-            else:
-                usedSprites = walkSprites
-                usedCount = player.walkCount
-
-            # Affichage des sprites, on inverse la sprite s'il regarde à gauche
-            # S'il va vers la gauche ou regarde vers la gauche
-            if player.movement[0] < 0 or player.lastDirection == "left":
-                # Divison euclidienne par 5 pour qu'il y ait une sprite toutes les 5 frames, soit un framerate d'animation à 12FPS (60 / 5)
-                screen.blit(pygame.transform.flip(
-                    usedSprites[usedCount // ANIMATION_REFRESH_RATE], True, False), (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
-            else:
-                screen.blit(usedSprites[usedCount // ANIMATION_REFRESH_RATE],
-                            (player.rect.x - cameraPos[0], player.rect.y - cameraPos[1]))
-
-            # On ajoute 1 au compteur de frame
-            if not player.onGround:
-                if player.ySpeed <= 0:
-                    player.jumpCount += 1
-                else:
-                    player.fallCount += 1
-            elif player.movement[0] == 0:
-                player.idleCount += 1
-            else:
-                player.walkCount += 1
-
-        # Affichage des plateformes
-        # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
+    if player.dead == False:
         for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
             # seront affichés simultanément à l'écran
             for x in range(math.ceil(ACTUAL_SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
@@ -250,7 +141,7 @@ def display(cameraPos):
         # On fait varier un "coefficient" de 0 à 1 pour maintenir une couleur cohérente sur la barre
         difference = (MAX_FPS * 25 - player.deathCountdown) / (MAX_FPS * 25)
         pygame.draw.line(colorRect, (104 + math.floor((222 - 104) * difference),
-                         222 - math.floor((222 - 71) * difference), 71), (1, 0), (1, 1))
+                                     222 - math.floor((222 - 71) * difference), 71), (1, 0), (1, 1))
         rectWidth = math.floor(
             ACTUAL_SCREEN_SIZE[0] // 2 * (player.deathCountdown / (MAX_FPS * 25)))
         if rectWidth < 0:
@@ -388,7 +279,7 @@ while running:
     # On ajoute la vitesse à la position à chaque frame (pour que sa position en y soit polynômiale en fonction du temps)
     player.movement[1] += player.ySpeed
 
-    player.rect, collisions = player.move(platformHitboxes)
+    collisions = player.move(platformHitboxes)
     if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
         player.ySpeed = 0
         player.airTime = 0
