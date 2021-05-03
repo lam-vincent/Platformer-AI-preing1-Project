@@ -2,6 +2,7 @@
 # https://assetstore.unity.com/packages/2d/characters/hero-knight-167779
 
 import pygame, sys, math, random, perlin_noise
+from utils.Player import Player 
 
 # Constantes
 SCREEN_SIZE = (700, 500) # Le jeu est généré en 700 x 500
@@ -21,7 +22,6 @@ MAX_FPS = 60
 ANIMATION_FPS = MAX_FPS // 5
 ANIMATION_REFRESH_RATE = MAX_FPS // ANIMATION_FPS
 
-from utils.Player import Player #importation du joueur apres les constantes globales
 
 trueCameraPos = [0, 0] # Variable globale pour la position de la caméra
 
