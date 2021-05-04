@@ -202,6 +202,12 @@ def display(cameraPos, players: [Player]):
     pygame.display.flip()
 
 
+def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
+    if player.rect.x < cameraPos[0] - SCREEN_SIZE[0]/2:
+        return True
+    return False
+
+
 players = [Player(300, -500, "player_1"),
            Player(350, -500, "player_2")]  # init players
 
@@ -219,6 +225,11 @@ while running:
     best_xMax_player = bestXMaxPlayer(players)
 
     cameraPos = handleCamera(best_score_player)
+
+    for index, player in enumerate(players):
+        print(f"{player.name}.x = {player.rect.x}")
+        if isOutOfTheScreen(player, cameraPos):
+            players.pop(index)
 
     # Plateformes & Chunks
     platformHitboxes = handlePlatform(
