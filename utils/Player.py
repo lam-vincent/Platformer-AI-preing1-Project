@@ -186,3 +186,60 @@ class Player:
                     self.idleCount += 1
                 else:
                     self.walkCount += 1
+
+    def update(self, platformHitboxes, sound):
+        # On applique la gravité au joueur
+        self.ySpeed += ACCELERATION
+        if self.ySpeed > 20:  # et on la limite à 20 maximum
+            self.ySpeed = 20
+        # Si jamais le joueur arrive en bas de l'écran
+        if self.rect.y > SCREEN_SIZE[1] - self.height:
+            if not self.deathSoundPlayed:
+                deathSound()
+                self.deathSoundPlayed = True
+            self.dead = True
+            self.movement[0] = 0
+
+        # Traitement du cooldown du dash (on le fait ici pour mettre ySpeed à 0 s'il est en train de dash)
+        if self.xDashCD > 0:
+            self.xDashCD -= 1
+            if self.xDashCD <= MAX_FPS/1.3:  # Si le joueur est dans la phase "descendante" du dash, on veut que sa vitesse revienne à la normale
+                if self.movement[0] < 0:
+                    self.movement[0] = (self.movement[0] - 3) // 2
+                if self.movement[0] > 0:
+                    self.movement[0] = (self.movement[0] + 4) // 2
+            elif self.yDashCD == 0:
+                self.ySpeed = 0
+        if self.yDashCD > 0:
+            self.yDashCD -= 1
+            if self.yDashCD == 0:
+                self.yDashCount = 0
+
+        # On ajoute la vitesse à la position à chaque frame (pour que sa position en y soit polynômiale en fonction du temps)
+        self.movement[1] += self.ySpeed
+
+        collisions = self.move(platformHitboxes)
+        if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
+            self.ySpeed = 0
+            self.airTime = 0
+            self.onGround = True
+            self.xDashCD = 0
+            self.canXDash = True
+            self.canActivateArrows = [True, True]
+        else:
+            self.airTime += 1
+            # Si le joueur a dépassé son temps de saut, on le considère dans les airs (ceci permet aussi de fixer un bug graphique)
+            if self.airTime >= 6:
+                self.onGround = False
+
+        self.movement[1] = 0
+
+        if self.movement[0] != 0 and self.onGround:
+            if self.walkSoundCount + 1 > 30:
+                self.walkSoundCount = 0
+            else:
+                self.walkSoundCount += 1
+            if self.walkSoundCount == 1:
+                sound("walk1")
+            if self.walkSoundCount == 16:
+                sound("walk2")

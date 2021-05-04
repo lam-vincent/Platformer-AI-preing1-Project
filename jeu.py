@@ -249,61 +249,7 @@ while running:
                     player.canActivateArrows[1] = False
                     sound("dashY")
 
-    # On applique la gravité au joueur
-    player.ySpeed += ACCELERATION
-    if player.ySpeed > 20:  # et on la limite à 20 maximum
-        player.ySpeed = 20
-    # Si jamais le joueur arrive en bas de l'écran
-    if player.rect.y > SCREEN_SIZE[1] - player.height:
-        if not player.deathSoundPlayed:
-            deathSound()
-            player.deathSoundPlayed = True
-        player.dead = True
-        player.movement[0] = 0
-
-    # Traitement du cooldown du dash (on le fait ici pour mettre ySpeed à 0 s'il est en train de dash)
-    if player.xDashCD > 0:
-        player.xDashCD -= 1
-        if player.xDashCD <= MAX_FPS/1.3:  # Si le joueur est dans la phase "descendante" du dash, on veut que sa vitesse revienne à la normale
-            if player.movement[0] < 0:
-                player.movement[0] = (player.movement[0] - 3) // 2
-            if player.movement[0] > 0:
-                player.movement[0] = (player.movement[0] + 4) // 2
-        elif player.yDashCD == 0:
-            player.ySpeed = 0
-    if player.yDashCD > 0:
-        player.yDashCD -= 1
-        if player.yDashCD == 0:
-            player.yDashCount = 0
-
-    # On ajoute la vitesse à la position à chaque frame (pour que sa position en y soit polynômiale en fonction du temps)
-    player.movement[1] += player.ySpeed
-
-    collisions = player.move(platformHitboxes)
-    if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
-        player.ySpeed = 0
-        player.airTime = 0
-        player.onGround = True
-        player.xDashCD = 0
-        player.canXDash = True
-        player.canActivateArrows = [True, True]
-    else:
-        player.airTime += 1
-        # Si le joueur a dépassé son temps de saut, on le considère dans les airs (ceci permet aussi de fixer un bug graphique)
-        if player.airTime >= 6:
-            player.onGround = False
-
-    player.movement[1] = 0
-
-    if player.movement[0] != 0 and player.onGround:
-        if player.walkSoundCount + 1 > 30:
-            player.walkSoundCount = 0
-        else:
-            player.walkSoundCount += 1
-        if player.walkSoundCount == 1:
-            sound("walk1")
-        if player.walkSoundCount == 16:
-            sound("walk2")
+    player.update(platformHitboxes, sound)
 
     # Calcul du score, traitement du compte à rebours de mort du joueur
     if not player.dead:
