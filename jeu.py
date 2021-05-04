@@ -115,31 +115,40 @@ def handlePlatform(cameraPos, maximizingPlayer):
 
 def handleCamera(player):
     # Camera
-    tempTrueCameraPosX = (
-        player.rect.x - trueCameraPos[0] - (ACTUAL_SCREEN_SIZE[0] // 2 - player.width // 2))/20
-    trueCameraPos[0] += tempTrueCameraPosX
-    if trueCameraPos[0] < 0:  # On ne veut pas que la caméra aille trop sur la gauche
-        trueCameraPos[0] -= tempTrueCameraPosX
-    temptrueCameraPosY = (
-        player.rect.y - trueCameraPos[1] - (ACTUAL_SCREEN_SIZE[1] // 2 - player.height // 2))/20
-    trueCameraPos[1] += temptrueCameraPosY
-    if trueCameraPos[1] > 0:  # On ne veut pas que la caméra aille trop bas
-        trueCameraPos[1] -= temptrueCameraPosY
     cameraPos = trueCameraPos.copy()
-    cameraPos[0] = int(cameraPos[0])
-    cameraPos[1] = int(cameraPos[1])
+    if player != None:
+        tempTrueCameraPosX = (
+            player.rect.x - trueCameraPos[0] - (ACTUAL_SCREEN_SIZE[0] // 2 - player.width // 2))/20
+        trueCameraPos[0] += tempTrueCameraPosX
+        if trueCameraPos[0] < 0:  # On ne veut pas que la caméra aille trop sur la gauche
+            trueCameraPos[0] -= tempTrueCameraPosX
+        temptrueCameraPosY = (
+            player.rect.y - trueCameraPos[1] - (ACTUAL_SCREEN_SIZE[1] // 2 - player.height // 2))/20
+        trueCameraPos[1] += temptrueCameraPosY
+        if trueCameraPos[1] > 0:  # On ne veut pas que la caméra aille trop bas
+            trueCameraPos[1] -= temptrueCameraPosY
+        cameraPos[0] = int(cameraPos[0])
+        cameraPos[1] = int(cameraPos[1])
 
     return cameraPos
 
 
 def bestXMaxPlayer(players: [Player]) -> Player:
     '''returns player object with the max xMax value from an array'''
-    return max(players, key=lambda item: item.xMax)
+    if len(players) != 0:
+        return max(players, key=lambda item: item.xMax)
+    return None
 
 
 def bestScorePlayer(players: [Player]) -> Player:
     ''' returns the player with the best score from players in an array '''
-    return max(players, key=lambda item: item.score)
+    if len(players) != 0:
+        return max(players, key=lambda item: item.score)
+    return None
+
+
+def stillPlayersAlive(players: [Player]) -> bool:
+    return len(players) != 0
 
 
 def display(cameraPos, players: [Player]):
@@ -151,51 +160,53 @@ def display(cameraPos, players: [Player]):
 
     player = bestScorePlayer(players)
 
-    if player.dead == False:
-        for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
-            # seront affichés simultanément à l'écran
-            for x in range(math.ceil(ACTUAL_SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
-                chunkX = x - 1 + \
-                    int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
-                chunkY = y - 1 + \
-                    int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
-                targetChunk = str(chunkX) + ";" + str(chunkY)
-                for platform in gameMap[targetChunk]:
-                    if platform[1] > 0:
-                        screen.blit(platformSprites[platform[1]], (
-                            platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
+    if stillPlayersAlive(players):
+        if player.dead == False:
+            for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+                # seront affichés simultanément à l'écran
+                for x in range(math.ceil(ACTUAL_SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+                    chunkX = x - 1 + \
+                        int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
+                    chunkY = y - 1 + \
+                        int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
+                    targetChunk = str(chunkX) + ";" + str(chunkY)
+                    for platform in gameMap[targetChunk]:
+                        if platform[1] > 0:
+                            screen.blit(platformSprites[platform[1]], (
+                                platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
 
-        # Affichage du compte à rebours de mort du joueur
-        colorRect = pygame.Surface((2, 2))
-        pygame.draw.line(colorRect, (222, 71, 71), (0, 0), (0, 1))
-        # On fait varier un "coefficient" de 0 à 1 pour maintenir une couleur cohérente sur la barre
-        difference = (MAX_FPS * 25 - player.deathCountdown) / (MAX_FPS * 25)
-        pygame.draw.line(colorRect, (104 + math.floor((222 - 104) * difference),
-                                     222 - math.floor((222 - 71) * difference), 71), (1, 0), (1, 1))
-        rectWidth = math.floor(
-            ACTUAL_SCREEN_SIZE[0] // 2 * (player.deathCountdown / (MAX_FPS * 25)))
-        if rectWidth < 0:
-            rectWidth = 0
-        rectHeight = ACTUAL_SCREEN_SIZE[1] // 50
-        colorRect = pygame.transform.smoothscale(
-            colorRect, (rectWidth, rectHeight))
-        screen.blit(colorRect, ((
-            ACTUAL_SCREEN_SIZE[0] - rectWidth) // 2, ACTUAL_SCREEN_SIZE[1] // 10))
+            # Affichage du compte à rebours de mort du joueur
+            colorRect = pygame.Surface((2, 2))
+            pygame.draw.line(colorRect, (222, 71, 71), (0, 0), (0, 1))
+            # On fait varier un "coefficient" de 0 à 1 pour maintenir une couleur cohérente sur la barre
+            difference = (MAX_FPS * 25 - player.deathCountdown) / \
+                (MAX_FPS * 25)
+            pygame.draw.line(colorRect, (104 + math.floor((222 - 104) * difference),
+                                         222 - math.floor((222 - 71) * difference), 71), (1, 0), (1, 1))
+            rectWidth = math.floor(
+                ACTUAL_SCREEN_SIZE[0] // 2 * (player.deathCountdown / (MAX_FPS * 25)))
+            if rectWidth < 0:
+                rectWidth = 0
+            rectHeight = ACTUAL_SCREEN_SIZE[1] // 50
+            colorRect = pygame.transform.smoothscale(
+                colorRect, (rectWidth, rectHeight))
+            screen.blit(colorRect, ((
+                ACTUAL_SCREEN_SIZE[0] - rectWidth) // 2, ACTUAL_SCREEN_SIZE[1] // 10))
 
-        # Affichage des flèches de dash
-        arrowDisplayY = ACTUAL_SCREEN_SIZE[1] // 2 + 100
-        coordsLeft = (
-            (ACTUAL_SCREEN_SIZE[0] - ARROW_SIZE) // 2 - ARROW_SIZE, arrowDisplayY)
-        coordsRight = (
-            (ACTUAL_SCREEN_SIZE[0] + ARROW_SIZE) // 2, arrowDisplayY)
-        if not player.canActivateArrows[0] or player.onGround:
-            screen.blit(rightArrow[0], coordsLeft)
-        else:
-            screen.blit(rightArrow[1], coordsLeft)
-        if not player.canActivateArrows[1] or player.onGround:
-            screen.blit(upArrow[0], coordsRight)
-        else:
-            screen.blit(upArrow[1], coordsRight)
+            # Affichage des flèches de dash
+            arrowDisplayY = ACTUAL_SCREEN_SIZE[1] // 2 + 100
+            coordsLeft = (
+                (ACTUAL_SCREEN_SIZE[0] - ARROW_SIZE) // 2 - ARROW_SIZE, arrowDisplayY)
+            coordsRight = (
+                (ACTUAL_SCREEN_SIZE[0] + ARROW_SIZE) // 2, arrowDisplayY)
+            if not player.canActivateArrows[0] or player.onGround:
+                screen.blit(rightArrow[0], coordsLeft)
+            else:
+                screen.blit(rightArrow[1], coordsLeft)
+            if not player.canActivateArrows[1] or player.onGround:
+                screen.blit(upArrow[0], coordsRight)
+            else:
+                screen.blit(upArrow[1], coordsRight)
 
     window.blit(pygame.transform.scale(screen, ACTUAL_SCREEN_SIZE),
                 (0, 0))  # On affiche l'écran à la taille indiquée
@@ -203,7 +214,7 @@ def display(cameraPos, players: [Player]):
 
 
 def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
-    if player.rect.x < cameraPos[0] - SCREEN_SIZE[0]/2:
+    if player.rect.x < cameraPos[0]:
         return True
     return False
 
@@ -229,6 +240,8 @@ while running:
     for index, player in enumerate(players):
         print(f"{player.name}.x = {player.rect.x}")
         if isOutOfTheScreen(player, cameraPos):
+            players.pop(index)
+        if player.dead:
             players.pop(index)
 
     # Plateformes & Chunks

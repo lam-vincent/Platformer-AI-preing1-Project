@@ -6,7 +6,7 @@ from utils.settings import *
 
 
 class Player:
-    def __init__(self, posX, posY, name="noname"):
+    def __init__(self, posX, posY, name="no_name"):
         self.name = name
 
         self.width = 47
@@ -66,8 +66,11 @@ class Player:
 
     def sound(self, name):
         if not self.dead:  # On ne veut pas qu'un son se joue si le joueur est dans l'écran de mort
-            path = "sounds/{0}.wav"
-            self.mixer.find_channel().play(self.mixer.Sound(path.format(name)))
+            try:
+                path = "sounds/{0}.wav"
+                self.mixer.find_channel().play(self.mixer.Sound(path.format(name)))
+            except:
+                print("can't play sound")
 
     def deathSound(self):
         self.mixer.set_num_channels(0)
@@ -126,6 +129,8 @@ class Player:
 
     def handleDeath(self, screen):
         '''Display death animation and death screen'''
+        pass
+        """
         screen.fill(DARK_DARK_GREY)
         if not self.deathAnimationPlayed:
             if self.deathCount > 14 * (ANIMATION_REFRESH_RATE * 2):
@@ -141,6 +146,8 @@ class Player:
             textSize = self.font.size(texte)
             screen.blit(text, ((
                 ACTUAL_SCREEN_SIZE[0] - textSize[0])/2, (ACTUAL_SCREEN_SIZE[1] - textSize[1])/2))
+
+        """
 
     def spriteAnimationLoop(self):
         # Affichage du joueur
