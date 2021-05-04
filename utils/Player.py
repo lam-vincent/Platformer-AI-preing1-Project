@@ -97,6 +97,11 @@ class Player:
 
         return hitList
 
+    def gravity(self):
+        self.ySpeed += ACCELERATION
+        if self.ySpeed > 20:  # et on la limite à 20 maximum
+            self.ySpeed = 20
+
     def display(self, screen, cameraPos, score):
         if self.dead:
             screen.fill(DARK_DARK_GREY)
@@ -187,11 +192,10 @@ class Player:
                 else:
                     self.walkCount += 1
 
-    def update(self, platformHitboxes, sound):
+    def update(self, platformHitboxes, sound, deathSound):
         # On applique la gravité au joueur
-        self.ySpeed += ACCELERATION
-        if self.ySpeed > 20:  # et on la limite à 20 maximum
-            self.ySpeed = 20
+        self.gravity()
+
         # Si jamais le joueur arrive en bas de l'écran
         if self.rect.y > SCREEN_SIZE[1] - self.height:
             if not self.deathSoundPlayed:

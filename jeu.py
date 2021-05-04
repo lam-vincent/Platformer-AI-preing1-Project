@@ -109,7 +109,23 @@ def generateChunk(x, y):
     return chunkData
 
 
-player = Player(350, -500)
+def handlePlatformCollision(cameraPos):
+    '''Loop through platforms, calculates their hitboxes and returns them'''
+    platformHitboxes = []
+    for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+        chunkY = y - 1 + int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
+        for x in range(math.ceil(ACTUAL_SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
+            chunkX = x - 1 + int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
+            targetChunk = str(chunkX) + ";" + str(chunkY)
+            if targetChunk not in gameMap:
+                gameMap[targetChunk] = generateChunk(chunkX, chunkY)
+            for platform in gameMap[targetChunk]:
+                if platform[1] > 0:
+                    platformHitboxes.append(pygame.Rect(
+                        platform[0][0] * BLOCK_SIZE, platform[0][1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+
+    return platformHitboxes
+
 
 # Fonction d'affichage à l'écran
 
@@ -172,9 +188,9 @@ def display(cameraPos):
     pygame.display.flip()
 
 
-# Boucle de jeu
+player = Player(350, -500) # init player
 running = True
-while running:
+while running:  # Boucle de jeu
 
     # Camera
     tempTrueCameraPosX = (
@@ -192,18 +208,7 @@ while running:
     cameraPos[1] = int(cameraPos[1])
 
     # Plateformes & Chunks
-    platformHitboxes = []
-    for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
-        chunkY = y - 1 + int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
-        for x in range(math.ceil(ACTUAL_SCREEN_SIZE[0] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
-            chunkX = x - 1 + int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
-            targetChunk = str(chunkX) + ";" + str(chunkY)
-            if targetChunk not in gameMap:
-                gameMap[targetChunk] = generateChunk(chunkX, chunkY)
-            for platform in gameMap[targetChunk]:
-                if platform[1] > 0:
-                    platformHitboxes.append(pygame.Rect(
-                        platform[0][0] * BLOCK_SIZE, platform[0][1] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+    platformHitboxes = handlePlatformCollision(cameraPos)
 
     # Input
     for event in pygame.event.get():
@@ -249,7 +254,7 @@ while running:
                     player.canActivateArrows[1] = False
                     sound("dashY")
 
-    player.update(platformHitboxes, sound)
+    player.update(platformHitboxes, sound, deathSound)
 
     # Calcul du score, traitement du compte à rebours de mort du joueur
     if not player.dead:
