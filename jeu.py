@@ -127,9 +127,8 @@ def handlePlatformCollision(cameraPos, player):
 # Fonction d'affichage à l'écran
 
 
-def display(cameraPos):
+def display(cameraPos, player):
     # On global player pour modifier (uniquement les compteurs de frames)
-    global player
     # Affichage des plateformes
     # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
     player.display(screen, cameraPos)
@@ -207,53 +206,10 @@ while running:  # Boucle de jeu
     # Plateformes & Chunks
     platformHitboxes = handlePlatformCollision(cameraPos, player)
 
-    # Input
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-            sys.exit()
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q:
-                player.movement[0] = -4
-                player.lastDirection = "left"
-
-            if event.key == pygame.K_d:
-                player.movement[0] = 4
-                player.lastDirection = "right"
-
-            # Si le joueur est dans les airs depuis moins de 6 frames, il peut quand même sauter
-            if event.key == pygame.K_SPACE and player.onGround and player.airTime < 6:
-                player.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
-                player.walkCount = 0
-                player.walkSoundCount = 0
-                player.onGround = False
-                sound("jump")
-
-        if event.type == pygame.KEYUP:
-            if (player.movement[0] < 0 and event.key == pygame.K_q) or (player.movement[0] > 0 and event.key == pygame.K_d):
-                player.movement[0] = 0
-
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == pygame.BUTTON_LEFT:
-                if player.xDashCD == 0 and player.movement[0] != 0 and player.canXDash and not player.onGround:
-                    if player.movement[0] < 0:
-                        player.movement[0] = -10
-                    else:
-                        player.movement[0] = 10
-                    player.xDashCD = MAX_FPS
-                    player.canXDash = False
-                    player.canActivateArrows[0] = False
-                    sound("dashX")
-                if player.xDashCD > 0 and player.xDashCD < MAX_FPS - 1 and player.yDashCD == 0 and not player.onGround and player.airTime >= 14:
-                    player.ySpeed = -10
-                    player.yDashCD = player.xDashCD
-                    player.canActivateArrows[1] = False
-                    sound("dashY")
-
+    player.eventHandler(sound)  # handle input for player
+    # handle physics and collision
     player.update(platformHitboxes, sound, deathSound)
-
-    display(cameraPos)
+    display(cameraPos, player)  # display everything including the player
 
     clock.tick(MAX_FPS)
 

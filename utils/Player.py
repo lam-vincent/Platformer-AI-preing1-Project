@@ -1,5 +1,6 @@
 import pygame
 import math
+import sys
 from utils.settings import *
 # Classe de joueur
 
@@ -282,3 +283,48 @@ class Player:
                     deathSound()
                     self.deathSoundPlayed = True
                 self.dead = True
+
+    def eventHandler(self, sound):
+        # Input
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    self.movement[0] = -4
+                    self.lastDirection = "left"
+
+                if event.key == pygame.K_d:
+                    self.movement[0] = 4
+                    self.lastDirection = "right"
+
+                # Si le joueur est dans les airs depuis moins de 6 frames, il peut quand même sauter
+                if event.key == pygame.K_SPACE and self.onGround and self.airTime < 6:
+                    self.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
+                    self.walkCount = 0
+                    self.walkSoundCount = 0
+                    self.onGround = False
+                    sound("jump")
+
+            if event.type == pygame.KEYUP:
+                if (self.movement[0] < 0 and event.key == pygame.K_q) or (self.movement[0] > 0 and event.key == pygame.K_d):
+                    self.movement[0] = 0
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == pygame.BUTTON_LEFT:
+                    if self.xDashCD == 0 and self.movement[0] != 0 and self.canXDash and not self.onGround:
+                        if self.movement[0] < 0:
+                            self.movement[0] = -10
+                        else:
+                            self.movement[0] = 10
+                        self.xDashCD = MAX_FPS
+                        self.canXDash = False
+                        self.canActivateArrows[0] = False
+                        sound("dashX")
+                    if self.xDashCD > 0 and self.xDashCD < MAX_FPS - 1 and self.yDashCD == 0 and not self.onGround and self.airTime >= 14:
+                        self.ySpeed = -10
+                        self.yDashCD = self.xDashCD
+                        self.canActivateArrows[1] = False
+                        sound("dashY")
