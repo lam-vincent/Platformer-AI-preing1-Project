@@ -26,24 +26,6 @@ window = pygame.display.set_mode(ACTUAL_SCREEN_SIZE)
 pygame.display.set_caption("Jeu de plateforme")
 clock = pygame.time.Clock()
 
-mixer = pygame.mixer
-mixer.Channel(0).play(mixer.Sound('sounds/music.wav'), loops=-1)
-
-# Fonction pour jouer des sons
-
-
-def sound(name):
-    if not player.dead:  # On ne veut pas qu'un son se joue si le joueur est dans l'écran de mort
-        path = "sounds/{0}.wav"
-        mixer.find_channel().play(mixer.Sound(path.format(name)))
-
-
-def deathSound():
-    mixer.set_num_channels(0)
-    mixer.set_num_channels(1)
-    mixer.Channel(0).play(mixer.Sound('sounds/death2.wav'))
-    mixer.fadeout(8000)
-
 
 def loadPlatformSprites(spriteName):  # des plateformes
     spriteTemplate = "assets/platform/{0}.png"
@@ -206,9 +188,9 @@ while running:  # Boucle de jeu
     # Plateformes & Chunks
     platformHitboxes = handlePlatformCollision(cameraPos, player)
 
-    player.eventHandler(sound)  # handle input for player
+    player.eventHandler()  # handle input for player
     # handle physics and collision
-    player.update(platformHitboxes, sound, deathSound)
+    player.update(platformHitboxes)
     display(cameraPos, player)  # display everything including the player
 
     clock.tick(MAX_FPS)

@@ -59,6 +59,23 @@ class Player:
         self.font = pygame.font.Font(None, math.floor(
             44 * ((ACTUAL_SCREEN_SIZE[0] + ACTUAL_SCREEN_SIZE[1])/2)/((700 + 500)/2)))
 
+        self.mixer = pygame.mixer
+        self.mixer.Channel(0).play(
+            self.mixer.Sound('sounds/music.wav'), loops=-1)
+
+        # Fonction pour jouer des sons
+
+    def sound(self, name):
+        if not self.dead:  # On ne veut pas qu'un son se joue si le joueur est dans l'écran de mort
+            path = "sounds/{0}.wav"
+            self.mixer.find_channel().play(self.mixer.Sound(path.format(name)))
+
+    def deathSound(self):
+        self.mixer.set_num_channels(0)
+        self.mixer.set_num_channels(1)
+        self.mixer.Channel(0).play(self.mixer.Sound('sounds/death2.wav'))
+        self.mixer.fadeout(8000)
+
     def loadKnightSprites(self, spriteName, spriteCount):  # du joueur
         spriteList = []
         spriteTemplate = "assets/knight/{0}/{0}_{1!s}.png"
@@ -198,14 +215,14 @@ class Player:
                 else:
                     self.walkCount += 1
 
-    def update(self, platformHitboxes, sound, deathSound):
+    def update(self, platformHitboxes):
         # On applique la gravité au joueur
         self.gravity()
 
         # Si jamais le joueur arrive en bas de l'écran
         if self.rect.y > SCREEN_SIZE[1] - self.height:
             if not self.deathSoundPlayed:
-                deathSound()
+                self.deathSound()
                 self.deathSoundPlayed = True
             self.dead = True
             self.movement[0] = 0
@@ -250,9 +267,9 @@ class Player:
             else:
                 self.walkSoundCount += 1
             if self.walkSoundCount == 1:
-                sound("walk1")
+                self.sound("walk1")
             if self.walkSoundCount == 16:
-                sound("walk2")
+                self.sound("walk2")
 
         # Calcul du score, traitement du compte à rebours de mort du joueur
         if not self.dead:
@@ -280,11 +297,11 @@ class Player:
 
             if self.deathCountdown == 0:
                 if not self.deathSoundPlayed:
-                    deathSound()
+                    self.deathSound()
                     self.deathSoundPlayed = True
                 self.dead = True
 
-    def eventHandler(self, sound):
+    def eventHandler(self):
         # Input
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -306,7 +323,7 @@ class Player:
                     self.walkCount = 0
                     self.walkSoundCount = 0
                     self.onGround = False
-                    sound("jump")
+                    self.sound("jump")
 
             if event.type == pygame.KEYUP:
                 if (self.movement[0] < 0 and event.key == pygame.K_q) or (self.movement[0] > 0 and event.key == pygame.K_d):
@@ -322,9 +339,9 @@ class Player:
                         self.xDashCD = MAX_FPS
                         self.canXDash = False
                         self.canActivateArrows[0] = False
-                        sound("dashX")
+                        self.sound("dashX")
                     if self.xDashCD > 0 and self.xDashCD < MAX_FPS - 1 and self.yDashCD == 0 and not self.onGround and self.airTime >= 14:
                         self.ySpeed = -10
                         self.yDashCD = self.xDashCD
                         self.canActivateArrows[1] = False
-                        sound("dashY")
+                        self.sound("dashY")
