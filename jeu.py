@@ -142,7 +142,7 @@ def bestScorePlayer(players: [Player]) -> Player:
     return max(players, key=lambda item: item.score)
 
 
-def display(cameraPos, players):
+def display(cameraPos, players: [Player]):
     # On global player pour modifier (uniquement les compteurs de frames)
     # Affichage des plateformes
     # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
@@ -202,12 +202,19 @@ def display(cameraPos, players):
     pygame.display.flip()
 
 
-players = [Player(350, -500, "player_1")]  # init players
+players = [Player(300, -500, "player_1"),
+           Player(350, -500, "player_2")]  # init players
 
 
 running = True
 while running:
     screen.fill(DARK_GREY)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            sys.exit()
+
     best_score_player = bestScorePlayer(players)
     best_xMax_player = bestXMaxPlayer(players)
 
@@ -218,7 +225,6 @@ while running:
         cameraPos, best_xMax_player)  # handleCollision and create platforms
 
     for player in players:
-        print(f"{player.name} is playing")
         player.eventHandler()  # handle input for player
         player.update(platformHitboxes)  # handle physics and collision
 
