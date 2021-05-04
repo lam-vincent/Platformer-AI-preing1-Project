@@ -222,6 +222,8 @@ def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
 players = [Player(300, -500, "player_1"),
            Player(350, -500, "player_2")]  # init players
 
+for i in range(20):
+    players.append(Player(300, -500))
 
 running = True
 while running:
@@ -238,7 +240,6 @@ while running:
     cameraPos = handleCamera(best_score_player)
 
     for index, player in enumerate(players):
-        print(f"{player.name}.x = {player.rect.x}")
         if isOutOfTheScreen(player, cameraPos):
             players.pop(index)
         if player.dead:

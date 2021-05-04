@@ -1,12 +1,16 @@
 import pygame
 import math
 import sys
+import numpy as np
+from utils.Brain import Brain
 from utils.settings import *
 # Classe de joueur
 
 
-class Player:
+class Player(Brain):
     def __init__(self, posX, posY, name="no_name"):
+        Brain.__init__(self)
+
         self.name = name
 
         self.width = 47
@@ -232,10 +236,33 @@ class Player:
                 else:
                     self.walkCount += 1
 
+    def getArrayFromDict(self, collisionDict):
+        res = list(collisionDict.values())
+        for i in range(len(res)):
+            res[i] = int(res[i])
+        res = np.array(res)
+        res = res.reshape(1, -1)
+        return np.array(res)
+
+    def indexMaxValue(self, arr) -> int:
+        if len(arr) == 0:
+            return -1
+
+        maxVal = arr[0]
+        maxIndex = 0
+
+        print(maxVal)
+
+        for i in range(len(arr)):
+            if arr[i] > maxVal:
+                maxVal = arr[i]
+                maxIndex = i
+
+        return maxIndex
+
     def update(self, platformHitboxes):
         # On applique la gravité au joueur
         self.gravity()
-
         # Si jamais le joueur arrive en bas de l'écran
         if self.rect.y > SCREEN_SIZE[1] - self.height:
             self.killPlayer()
@@ -259,6 +286,29 @@ class Player:
         self.movement[1] += self.ySpeed
 
         collisions = self.move(platformHitboxes)
+
+        prediction = self.model(
+            self.getArrayFromDict(collisions), training=False)
+        prediction = np.array(prediction)
+        prediction = np.squeeze(prediction)
+        decision = self.indexMaxValue(prediction)
+
+        if decision == 0:
+            self.movement[0] = -4
+            self.lastDirection = "left"
+        elif decision == 1:
+            self.movement[0] = 4
+            self.lastDirection = "right"
+        else:
+            if self.onGround and self.airTime < 6:
+                self.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
+                self.walkCount = 0
+                self.walkSoundCount = 0
+                self.onGround = False
+                self.sound("jump")
+
+        print(f"prediction : {prediction}")
+
         if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
             self.ySpeed = 0
             self.airTime = 0
@@ -326,8 +376,10 @@ class Player:
         # Input
         pressed = pygame.key.get_pressed()
 
+        """
         if self.isKeyPress(pressed) == False:
             self.movement[0] = 0
+        """
         if pressed[pygame.K_q]:
             self.movement[0] = -4
             self.lastDirection = "left"

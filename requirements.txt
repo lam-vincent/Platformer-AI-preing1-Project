@@ -1,2 +1,3 @@
 pygame==2.0.1
 perlin-noise==1.7
+tensorflow==2.4.1
