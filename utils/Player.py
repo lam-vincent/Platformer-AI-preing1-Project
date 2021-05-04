@@ -9,6 +9,11 @@ class Player:
         self.width = 47
         self.height = 65
 
+        self.score = 0  # Score actuel du joueur utilisé comme score de fitness
+        self.xMax = 0  # Position maximal atteinte
+
+        self.previousSecond = -1
+
         # Hitbox du joueur (au passage on récupèrera les coordonnées du rect pour récupérer les coordonnées du joueur)
         self.rect = pygame.Rect(posX, posY, self.width, self.height)
 
@@ -102,7 +107,7 @@ class Player:
         if self.ySpeed > 20:  # et on la limite à 20 maximum
             self.ySpeed = 20
 
-    def display(self, screen, cameraPos, score):
+    def display(self, screen, cameraPos):
         if self.dead:
             screen.fill(DARK_DARK_GREY)
             if not self.deathAnimationPlayed:
@@ -114,7 +119,7 @@ class Player:
                     self.deathCount += 1
             else:
                 # Ajouter un temps de pause
-                texte = "Score : " + str(int(score))
+                texte = "score : " + str(int(self.score))
                 text = self.font.render(texte, True, (255, 255, 255))
                 textSize = self.font.size(texte)
                 screen.blit(text, ((
@@ -247,3 +252,33 @@ class Player:
                 sound("walk1")
             if self.walkSoundCount == 16:
                 sound("walk2")
+
+        # Calcul du score, traitement du compte à rebours de mort du joueur
+        if not self.dead:
+            seconds = pygame.time.get_ticks() // (1000/(MAX_FPS/60))
+
+            if self.previousSecond + 1 <= seconds:
+                self.previousSecond += 1
+                if self.score - 1 > 0:
+                    self.score -= 1
+
+            if self.xMax > 500:  # On ne veut pas faire commencer le compte à rebours trop tôt
+                if self.deathCountdown - self.xMax / 1000 + 0.9 < 0:
+                    self.deathCountdown = 0
+                else:
+                    self.deathCountdown -= self.xMax / 1000 + 0.9
+
+            if self.xMax < self.rect.x:
+                if self.deathCountdown > 0 and self.xMax > 500:
+                    if self.deathCountdown + self.xMax / 600 + 0.9 > MAX_FPS * 25:
+                        self.deathCountdown = MAX_FPS * 25
+                    else:
+                        self.deathCountdown += self.xMax / 600 + 0.9
+                self.xMax = self.rect.x
+                self.score += 0.1
+
+            if self.deathCountdown == 0:
+                if not self.deathSoundPlayed:
+                    deathSound()
+                    self.deathSoundPlayed = True
+                self.dead = True

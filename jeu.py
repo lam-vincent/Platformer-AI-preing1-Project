@@ -18,10 +18,6 @@ print("Seed =", seed)
 noise = perlin_noise.PerlinNoise(seed=seed)
 gameMap = {}  # Variable globale pour la map
 
-score = 0  # Le score de la partie
-# On aura besoin d'une variable hors de la boucle pour compter les secondes
-previousSecond = -1
-xMax = 0  # On aura besoin de connaître la position en x maximale que le joueur a atteint
 
 # Initialisation
 pygame.init()
@@ -75,7 +71,8 @@ upArrow = loadAllArrows("up")
 # Fonctions utilisées dans le fonctionnement du jeu
 
 
-def generateChunk(x, y):
+def generateChunk(x, y, player):
+    '''player : le joueur qui va le plus loin'''
     chunkData = []
     for xPos in range(CHUNK_SIZE):
         # On multiplie par CHUNK_SIZE pour arriver aux coordonnées du bloc ciblé (pas du pixel).
@@ -83,11 +80,11 @@ def generateChunk(x, y):
         tileType = 0
         # Les facteurs platformFactor et holeFactor ne doivent pas aller au-delà de 3 ou la génération serait vraiment mauvaise
         # platformFactor correspond à la dispersion des plateformes : plus il est élevé, plus les plateformes iront loin en haut et en bas
-        platformFactor = 1 + xMax / 7000
+        platformFactor = 1 + player.xMax / 7000
         # PRNG pour Pseudo Random Number Generator
         platformPrng = platformFactor ** 0.5 * -12 * noise(platformX/10) // 1
         # holeFactor correspond à la présence de trous : plus il est élevé, plus il y a de trous
-        holeFactor = 1 + xMax / 7000
+        holeFactor = 1 + player.xMax / 7000
         holePrng = math.floor(1/(holeFactor ** 2.5) * -
                               100 * noise(platformX/10)) + 1
 
@@ -109,7 +106,7 @@ def generateChunk(x, y):
     return chunkData
 
 
-def handlePlatformCollision(cameraPos):
+def handlePlatformCollision(cameraPos, player):
     '''Loop through platforms, calculates their hitboxes and returns them'''
     platformHitboxes = []
     for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
@@ -118,7 +115,7 @@ def handlePlatformCollision(cameraPos):
             chunkX = x - 1 + int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
             targetChunk = str(chunkX) + ";" + str(chunkY)
             if targetChunk not in gameMap:
-                gameMap[targetChunk] = generateChunk(chunkX, chunkY)
+                gameMap[targetChunk] = generateChunk(chunkX, chunkY, player)
             for platform in gameMap[targetChunk]:
                 if platform[1] > 0:
                     platformHitboxes.append(pygame.Rect(
@@ -135,7 +132,7 @@ def display(cameraPos):
     global player
     # Affichage des plateformes
     # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
-    player.display(screen, cameraPos, score)
+    player.display(screen, cameraPos)
 
     if player.dead == False:
         for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
@@ -188,7 +185,7 @@ def display(cameraPos):
     pygame.display.flip()
 
 
-player = Player(350, -500) # init player
+player = Player(350, -500)  # init player
 running = True
 while running:  # Boucle de jeu
 
@@ -208,7 +205,7 @@ while running:  # Boucle de jeu
     cameraPos[1] = int(cameraPos[1])
 
     # Plateformes & Chunks
-    platformHitboxes = handlePlatformCollision(cameraPos)
+    platformHitboxes = handlePlatformCollision(cameraPos, player)
 
     # Input
     for event in pygame.event.get():
@@ -255,36 +252,6 @@ while running:  # Boucle de jeu
                     sound("dashY")
 
     player.update(platformHitboxes, sound, deathSound)
-
-    # Calcul du score, traitement du compte à rebours de mort du joueur
-    if not player.dead:
-        seconds = pygame.time.get_ticks() // (1000/(MAX_FPS/60))
-
-        if previousSecond + 1 <= seconds:
-            previousSecond += 1
-            if score - 1 > 0:
-                score -= 1
-
-        if xMax > 500:  # On ne veut pas faire commencer le compte à rebours trop tôt
-            if player.deathCountdown - xMax / 1000 + 0.9 < 0:
-                player.deathCountdown = 0
-            else:
-                player.deathCountdown -= xMax / 1000 + 0.9
-
-        if xMax < player.rect.x:
-            if player.deathCountdown > 0 and xMax > 500:
-                if player.deathCountdown + xMax / 600 + 0.9 > MAX_FPS * 25:
-                    player.deathCountdown = MAX_FPS * 25
-                else:
-                    player.deathCountdown += xMax / 600 + 0.9
-            xMax = player.rect.x
-            score += 0.1
-
-        if player.deathCountdown == 0:
-            if not player.deathSoundPlayed:
-                deathSound()
-                player.deathSoundPlayed = True
-            player.dead = True
 
     display(cameraPos)
 
