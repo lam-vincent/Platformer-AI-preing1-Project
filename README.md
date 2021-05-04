@@ -11,7 +11,14 @@ Un point à creuser : jeux de plateau et de stratégie tour-par-tour
 
 `pip install -r requirements.txt`
 
-## Todo
+## Questionnement
 
 - Quelle variable utiliser comme var de fitness ? : déplacement maximal ou score instantané ? 
 - Comment handle les joueurs qui ne sont pas assez rapides par rapport au meilleur joueur ? On les supprime ?
+
+## Todo 
+
+- Gérer l'affichage de plusieurs joueurs
+    - Mieux gérer la collision de chaque joueur
+    - Mieur gérer la caméra 
+- Implémenter un réseau de neurone basique avec Keras sequential
