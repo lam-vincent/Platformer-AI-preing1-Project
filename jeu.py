@@ -56,8 +56,8 @@ upArrow = loadAllArrows("up")
 # Fonctions utilisées dans le fonctionnement du jeu
 
 
-def generateChunk(x, y, player):
-    '''player : le joueur qui va le plus loin'''
+def generateChunk(x, y, maximizingPlayer):
+    '''maximizingPlayer : le joueur qui va le plus loin'''
     chunkData = []
     for xPos in range(CHUNK_SIZE):
         # On multiplie par CHUNK_SIZE pour arriver aux coordonnées du bloc ciblé (pas du pixel).
@@ -65,11 +65,11 @@ def generateChunk(x, y, player):
         tileType = 0
         # Les facteurs platformFactor et holeFactor ne doivent pas aller au-delà de 3 ou la génération serait vraiment mauvaise
         # platformFactor correspond à la dispersion des plateformes : plus il est élevé, plus les plateformes iront loin en haut et en bas
-        platformFactor = 1 + player.xMax / 7000
+        platformFactor = 1 + maximizingPlayer.xMax / 7000
         # PRNG pour Pseudo Random Number Generator
         platformPrng = platformFactor ** 0.5 * -12 * noise(platformX/10) // 1
         # holeFactor correspond à la présence de trous : plus il est élevé, plus il y a de trous
-        holeFactor = 1 + player.xMax / 7000
+        holeFactor = 1 + maximizingPlayer.xMax / 7000
         holePrng = math.floor(1/(holeFactor ** 2.5) * -
                               100 * noise(platformX/10)) + 1
 
@@ -91,8 +91,11 @@ def generateChunk(x, y, player):
     return chunkData
 
 
-def handlePlatformCollision(cameraPos, player):
-    '''Loop through platforms, calculates their hitboxes and returns them'''
+def handlePlatform(cameraPos, maximizingPlayer):
+    '''
+    Loop through platforms, calculates their hitboxes and returns them
+    Also generates platforms according to camera position
+    '''
     platformHitboxes = []
     for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
         chunkY = y - 1 + int(round(cameraPos[1]/(CHUNK_SIZE * BLOCK_SIZE)))
@@ -100,7 +103,8 @@ def handlePlatformCollision(cameraPos, player):
             chunkX = x - 1 + int(round(cameraPos[0]/(CHUNK_SIZE * BLOCK_SIZE)))
             targetChunk = str(chunkX) + ";" + str(chunkY)
             if targetChunk not in gameMap:
-                gameMap[targetChunk] = generateChunk(chunkX, chunkY, player)
+                gameMap[targetChunk] = generateChunk(
+                    chunkX, chunkY, maximizingPlayer)
             for platform in gameMap[targetChunk]:
                 if platform[1] > 0:
                     platformHitboxes.append(pygame.Rect(
@@ -109,14 +113,43 @@ def handlePlatformCollision(cameraPos, player):
     return platformHitboxes
 
 
-# Fonction d'affichage à l'écran
+def handleCamera(player):
+    # Camera
+    tempTrueCameraPosX = (
+        player.rect.x - trueCameraPos[0] - (ACTUAL_SCREEN_SIZE[0] // 2 - player.width // 2))/20
+    trueCameraPos[0] += tempTrueCameraPosX
+    if trueCameraPos[0] < 0:  # On ne veut pas que la caméra aille trop sur la gauche
+        trueCameraPos[0] -= tempTrueCameraPosX
+    temptrueCameraPosY = (
+        player.rect.y - trueCameraPos[1] - (ACTUAL_SCREEN_SIZE[1] // 2 - player.height // 2))/20
+    trueCameraPos[1] += temptrueCameraPosY
+    if trueCameraPos[1] > 0:  # On ne veut pas que la caméra aille trop bas
+        trueCameraPos[1] -= temptrueCameraPosY
+    cameraPos = trueCameraPos.copy()
+    cameraPos[0] = int(cameraPos[0])
+    cameraPos[1] = int(cameraPos[1])
+
+    return cameraPos
 
 
-def display(cameraPos, player):
+def bestXMaxPlayer(players: [Player]) -> Player:
+    '''returns player object with the max xMax value from an array'''
+    return max(players, key=lambda item: item.xMax)
+
+
+def bestScorePlayer(players: [Player]) -> Player:
+    ''' returns the player with the best score from players in an array '''
+    return max(players, key=lambda item: item.score)
+
+
+def display(cameraPos, players):
     # On global player pour modifier (uniquement les compteurs de frames)
     # Affichage des plateformes
     # Ces math.ceil() permettent de savoir combien au plus de chunks en y et en x
-    player.display(screen, cameraPos)
+    for player in players:
+        player.display(screen, cameraPos)
+
+    player = bestScorePlayer(players)
 
     if player.dead == False:
         for y in range(math.ceil(ACTUAL_SCREEN_SIZE[1] / (BLOCK_SIZE * CHUNK_SIZE)) + 2):
@@ -169,32 +202,27 @@ def display(cameraPos, player):
     pygame.display.flip()
 
 
-player = Player(350, -500)  # init player
-running = True
-while running:  # Boucle de jeu
+players = [Player(350, -500, "player_1")]  # init players
 
-    # Camera
-    tempTrueCameraPosX = (
-        player.rect.x - trueCameraPos[0] - (ACTUAL_SCREEN_SIZE[0] // 2 - player.width // 2))/20
-    trueCameraPos[0] += tempTrueCameraPosX
-    if trueCameraPos[0] < 0:  # On ne veut pas que la caméra aille trop sur la gauche
-        trueCameraPos[0] -= tempTrueCameraPosX
-    temptrueCameraPosY = (
-        player.rect.y - trueCameraPos[1] - (ACTUAL_SCREEN_SIZE[1] // 2 - player.height // 2))/20
-    trueCameraPos[1] += temptrueCameraPosY
-    if trueCameraPos[1] > 0:  # On ne veut pas que la caméra aille trop bas
-        trueCameraPos[1] -= temptrueCameraPosY
-    cameraPos = trueCameraPos.copy()
-    cameraPos[0] = int(cameraPos[0])
-    cameraPos[1] = int(cameraPos[1])
+
+running = True
+while running:
+    screen.fill(DARK_GREY)
+    best_score_player = bestScorePlayer(players)
+    best_xMax_player = bestXMaxPlayer(players)
+
+    cameraPos = handleCamera(best_score_player)
 
     # Plateformes & Chunks
-    platformHitboxes = handlePlatformCollision(cameraPos, player)
+    platformHitboxes = handlePlatform(
+        cameraPos, best_xMax_player)  # handleCollision and create platforms
 
-    player.eventHandler()  # handle input for player
-    # handle physics and collision
-    player.update(platformHitboxes)
-    display(cameraPos, player)  # display everything including the player
+    for player in players:
+        print(f"{player.name} is playing")
+        player.eventHandler()  # handle input for player
+        player.update(platformHitboxes)  # handle physics and collision
+
+    display(cameraPos, players)  # display everything including the player
 
     clock.tick(MAX_FPS)
 

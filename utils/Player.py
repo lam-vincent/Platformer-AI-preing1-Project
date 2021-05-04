@@ -6,7 +6,9 @@ from utils.settings import *
 
 
 class Player:
-    def __init__(self, posX, posY):
+    def __init__(self, posX, posY, name="noname"):
+        self.name = name
+
         self.width = 47
         self.height = 65
 
@@ -122,37 +124,48 @@ class Player:
         if self.ySpeed > 20:  # et on la limite à 20 maximum
             self.ySpeed = 20
 
+    def handleDeath(self, screen):
+        '''Display death animation and death screen'''
+        screen.fill(DARK_DARK_GREY)
+        if not self.deathAnimationPlayed:
+            if self.deathCount > 14 * (ANIMATION_REFRESH_RATE * 2):
+                self.deathAnimationPlayed = True
+            else:
+                screen.blit(self.deathSprites[self.deathCount // (ANIMATION_REFRESH_RATE * 2)], ((
+                    ACTUAL_SCREEN_SIZE[0] - self.width)/2, (ACTUAL_SCREEN_SIZE[1] - self.height)/2))
+                self.deathCount += 1
+        else:
+            # Ajouter un temps de pause
+            texte = "score : " + str(int(self.score))
+            text = self.font.render(texte, True, (255, 255, 255))
+            textSize = self.font.size(texte)
+            screen.blit(text, ((
+                ACTUAL_SCREEN_SIZE[0] - textSize[0])/2, (ACTUAL_SCREEN_SIZE[1] - textSize[1])/2))
+
+    def spriteAnimationLoop(self):
+        # Affichage du joueur
+        # On loop les sprites (comme un GIF quoi)
+        if self.walkCount + 1 >= 8 * ANIMATION_REFRESH_RATE:
+            self.walkCount = 0
+        if self.idleCount + 1 >= 11 * ANIMATION_REFRESH_RATE:
+            self.idleCount = 0
+        if self.jumpCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
+            self.jumpCount = 0
+        if self.fallCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
+            self.fallCount = 0
+
+    def killPlayer(self):
+        if not self.deathSoundPlayed:
+            self.deathSound()
+            self.deathSoundPlayed = True
+        self.dead = True
+        self.movement[0] = 0
+
     def display(self, screen, cameraPos):
         if self.dead:
-            screen.fill(DARK_DARK_GREY)
-            if not self.deathAnimationPlayed:
-                if self.deathCount > 14 * (ANIMATION_REFRESH_RATE * 2):
-                    self.deathAnimationPlayed = True
-                else:
-                    screen.blit(self.deathSprites[self.deathCount // (ANIMATION_REFRESH_RATE * 2)], ((
-                        ACTUAL_SCREEN_SIZE[0] - self.width)/2, (ACTUAL_SCREEN_SIZE[1] - self.height)/2))
-                    self.deathCount += 1
-            else:
-                # Ajouter un temps de pause
-                texte = "score : " + str(int(self.score))
-                text = self.font.render(texte, True, (255, 255, 255))
-                textSize = self.font.size(texte)
-                screen.blit(text, ((
-                    ACTUAL_SCREEN_SIZE[0] - textSize[0])/2, (ACTUAL_SCREEN_SIZE[1] - textSize[1])/2))
+            self.handleDeath(screen)
         else:
-            # On remplit l'écran de gris foncé pour qu'une frame ne persiste pas sur la frame suivante
-            screen.fill(DARK_GREY)
-
-            # Affichage du joueur
-            # On loop les sprites (comme un GIF quoi)
-            if self.walkCount + 1 >= 8 * ANIMATION_REFRESH_RATE:
-                self.walkCount = 0
-            if self.idleCount + 1 >= 11 * ANIMATION_REFRESH_RATE:
-                self.idleCount = 0
-            if self.jumpCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
-                self.jumpCount = 0
-            if self.fallCount + 1 >= 3 * ANIMATION_REFRESH_RATE:
-                self.fallCount = 0
+            self.spriteAnimationLoop()
 
             # Traitement à part des sprites de la phase de dash horizontale où le joueur prend de la vitesse
             if self.xDashCD >= 48 * (MAX_FPS // 60):
@@ -218,11 +231,7 @@ class Player:
 
         # Si jamais le joueur arrive en bas de l'écran
         if self.rect.y > SCREEN_SIZE[1] - self.height:
-            if not self.deathSoundPlayed:
-                self.deathSound()
-                self.deathSoundPlayed = True
-            self.dead = True
-            self.movement[0] = 0
+            self.killPlayer()
 
         # Traitement du cooldown du dash (on le fait ici pour mettre ySpeed à 0 s'il est en train de dash)
         if self.xDashCD > 0:
@@ -300,12 +309,16 @@ class Player:
 
     def eventHandler(self):
         # Input
+
         for event in pygame.event.get():
+            print(f"{self.name} : {event.type}")
+
             if event.type == pygame.QUIT:
                 running = False
                 sys.exit()
 
             if event.type == pygame.KEYDOWN:
+                print(f"{self.name} is handling events")
                 if event.key == pygame.K_q:
                     self.movement[0] = -4
                     self.lastDirection = "left"

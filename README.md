@@ -21,4 +21,6 @@ Un point à creuser : jeux de plateau et de stratégie tour-par-tour
 - Gérer l'affichage de plusieurs joueurs
     - Mieux gérer la collision de chaque joueur
     - Mieur gérer la caméra 
+    - Si un joueur sort de l'écran il meurt et on l'enlève 
 - Implémenter un réseau de neurone basique avec Keras sequential
+- Need to rewrite event handler for input and implement `keypress`
