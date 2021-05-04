@@ -60,9 +60,6 @@ class Player:
             44 * ((ACTUAL_SCREEN_SIZE[0] + ACTUAL_SCREEN_SIZE[1])/2)/((700 + 500)/2)))
 
         self.mixer = pygame.mixer
-        self.mixer.Channel(0).play(
-            self.mixer.Sound('sounds/music.wav'), loops=-1)
-
         # Fonction pour jouer des sons
 
     def sound(self, name):

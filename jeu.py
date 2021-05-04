@@ -26,6 +26,9 @@ window = pygame.display.set_mode(ACTUAL_SCREEN_SIZE)
 pygame.display.set_caption("Jeu de plateforme")
 clock = pygame.time.Clock()
 
+mixer = pygame.mixer
+mixer.Channel(0).play(mixer.Sound('sounds/music.wav'), loops=-1)
+
 
 def loadPlatformSprites(spriteName):  # des plateformes
     spriteTemplate = "assets/platform/{0}.png"
