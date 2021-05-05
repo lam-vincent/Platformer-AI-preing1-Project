@@ -219,12 +219,8 @@ def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
         return True
     return False
 
-
-players = [Player(300, -500, "player_1"),
-           Player(350, -500, "player_2")]  # init players
-
-for i in range(30):
-    players.append(Player(300, -500))
+evolutionController = EvolutionController()
+evolutionController.generateFirstPopulation()
 
 running = True
 while running:
@@ -235,26 +231,29 @@ while running:
             running = False
             sys.exit()
 
-    best_score_player = bestScorePlayer(players)
-    best_xMax_player = bestXMaxPlayer(players)
+    best_score_player = bestScorePlayer(evolutionController.populationAlive)
+    best_xMax_player = bestXMaxPlayer(evolutionController.populationAlive)
 
     cameraPos = handleCamera(best_score_player)
 
-    for index, player in enumerate(players):
-        if isOutOfTheScreen(player, cameraPos):
-            players.pop(index)
+    for index, player in enumerate(evolutionController.populationAlive):
         if player.dead:
-            players.pop(index)
+            evolutionController.killPlayer(index)
+            
 
     # Plateformes & Chunks
     platformHitboxes = handlePlatform(
         cameraPos, best_xMax_player)  # handleCollision and create platforms
 
-    for player in players:
+    for player in evolutionController.populationAlive:
         player.eventHandler()  # handle input for player
         player.update(platformHitboxes)  # handle physics and collision
+        
+    if evolutionController.allPlayerAreDead():
+        evolutionController.startNextGeneration()
+        cameraPos = trueCameraPos 
 
-    display(cameraPos, players)  # display everything including the player
+    display(cameraPos, evolutionController.populationAlive)  # display everything including the player
 
     clock.tick(MAX_FPS)
 
