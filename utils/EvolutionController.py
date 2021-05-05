@@ -1,5 +1,7 @@
 from utils.Player import Player
-
+from utils.settings import *
+import pygame
+import math
 
 class EvolutionController:
     def __init__(self, taillePopulation=20, taillePopulationMutate=9, taillePopulationBest=1):
@@ -12,6 +14,9 @@ class EvolutionController:
 
         self.populationAlive = []
         self.populationDead = []
+
+        self.font = pygame.font.Font(None, 30)
+        self.font_sm = pygame.font.Font(None, 24)
 
     def getTaillePopulationRandom(self) -> int:
         ''' return size of random population '''
@@ -30,7 +35,7 @@ class EvolutionController:
     def generateFirstPopulation(self):
         ''' generate a population of player of size taillePopulation '''
         for i in range(self.taillePopulation):
-            self.populationAlive.append(Player(350, -500))
+            self.populationAlive.append(Player(350, -1000))
 
     def allPlayerAreDead(self) -> bool:
         if self.getNumberOfAlive():
@@ -47,9 +52,27 @@ class EvolutionController:
 
         self.populationAlive.append(bestPlayer)
         while len(self.populationAlive) <= self.taillePopulation:
-            self.populationAlive.append(Player(350, -500))
+            self.populationAlive.append(Player(350, -1000))
 
         self.generation += 1
         self.populationDead.clear()
 
-        print(f"Generation {self.generation}   -   player alive : {self.getNumberOfAlive()}")
+        print(
+            f"Generation {self.generation}   -   player alive : {self.getNumberOfAlive()}")
+
+    def displayText(self, screen):
+        generationText = self.font.render("Generation: " + str(self.generation), True, (255, 0, 0))
+        screen.blit(generationText, (0,0))
+
+        aliveText = self.font.render("Alive: " + str(self.getNumberOfAlive()), True, (255,0, 0))
+        screen.blit(aliveText, (0,20))
+
+        self.populationAlive.sort(key= lambda x: x.score, reverse=True) # sort by score
+
+        for i in range(20):
+            try:
+                txt = self.font_sm.render(str(i+1) + " - " + self.populationAlive[i].name + " : " + str(round(self.populationAlive[i].score)), True, (255,0,0))
+                screen.blit(txt, (0,50 +  i * 15))
+            except:
+                pass
+            

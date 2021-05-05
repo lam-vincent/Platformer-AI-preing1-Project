@@ -4,6 +4,7 @@ import sys
 import numpy as np
 from utils.Brain import Brain
 from utils.settings import *
+import names
 # Classe de joueur
 
 
@@ -11,7 +12,7 @@ class Player(Brain):
     def __init__(self, posX, posY, name="no_name"):
         Brain.__init__(self)
 
-        self.name = name
+        self.name = names.get_first_name()
 
         self.width = 47
         self.height = 65

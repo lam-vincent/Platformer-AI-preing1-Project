@@ -211,7 +211,6 @@ def display(cameraPos, players: [Player]):
 
     window.blit(pygame.transform.scale(screen, ACTUAL_SCREEN_SIZE),
                 (0, 0))  # On affiche l'écran à la taille indiquée
-    pygame.display.flip()
 
 
 def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
@@ -225,6 +224,7 @@ evolutionController.generateFirstPopulation()
 running = True
 while running:
     screen.fill(DARK_GREY)
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -255,6 +255,9 @@ while running:
 
     display(cameraPos, evolutionController.populationAlive)  # display everything including the player
 
+    evolutionController.displayText(screen)
+
+    pygame.display.flip()
     clock.tick(MAX_FPS)
 
 pygame.quit()
