@@ -8,6 +8,7 @@ import random
 import perlin_noise
 from utils.Player import Player
 from utils.settings import *
+from utils.EvolutionController import *
 
 
 trueCameraPos = [0, 0]  # Variable globale pour la position de la caméra
@@ -222,7 +223,7 @@ def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
 players = [Player(300, -500, "player_1"),
            Player(350, -500, "player_2")]  # init players
 
-for i in range(20):
+for i in range(30):
     players.append(Player(300, -500))
 
 running = True

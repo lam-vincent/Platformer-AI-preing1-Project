@@ -74,7 +74,7 @@ class Player(Brain):
                 path = "sounds/{0}.wav"
                 self.mixer.find_channel().play(self.mixer.Sound(path.format(name)))
             except:
-                print("can't play sound")
+                pass
 
     def deathSound(self):
         self.mixer.set_num_channels(0)
@@ -236,30 +236,6 @@ class Player(Brain):
                 else:
                     self.walkCount += 1
 
-    def getArrayFromDict(self, collisionDict):
-        res = list(collisionDict.values())
-        for i in range(len(res)):
-            res[i] = int(res[i])
-        res = np.array(res)
-        res = res.reshape(1, -1)
-        return np.array(res)
-
-    def indexMaxValue(self, arr) -> int:
-        if len(arr) == 0:
-            return -1
-
-        maxVal = arr[0]
-        maxIndex = 0
-
-        print(maxVal)
-
-        for i in range(len(arr)):
-            if arr[i] > maxVal:
-                maxVal = arr[i]
-                maxIndex = i
-
-        return maxIndex
-
     def update(self, platformHitboxes):
         # On applique la gravité au joueur
         self.gravity()
@@ -287,15 +263,23 @@ class Player(Brain):
 
         collisions = self.move(platformHitboxes)
 
-        prediction = self.model(
-            self.getArrayFromDict(collisions), training=False)
-        prediction = np.array(prediction)
-        prediction = np.squeeze(prediction)
-        decision = self.indexMaxValue(prediction)
+        decision = self.makeDecision(collisions)
 
         if decision == 0:
-            self.movement[0] = -4
-            self.lastDirection = "left"
+            if self.xDashCD == 0 and self.movement[0] != 0 and self.canXDash and not self.onGround:
+                if self.movement[0] < 0:
+                    self.movement[0] = -10
+                else:
+                    self.movement[0] = 10
+                self.xDashCD = MAX_FPS
+                self.canXDash = False
+                self.canActivateArrows[0] = False
+                self.sound("dashX")
+            if self.xDashCD > 0 and self.xDashCD < MAX_FPS - 1 and self.yDashCD == 0 and not self.onGround and self.airTime >= 14:
+                self.ySpeed = -10
+                self.yDashCD = self.xDashCD
+                self.canActivateArrows[1] = False
+                self.sound("dashY")
         elif decision == 1:
             self.movement[0] = 4
             self.lastDirection = "right"
@@ -306,8 +290,6 @@ class Player(Brain):
                 self.walkSoundCount = 0
                 self.onGround = False
                 self.sound("jump")
-
-        print(f"prediction : {prediction}")
 
         if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
             self.ySpeed = 0
