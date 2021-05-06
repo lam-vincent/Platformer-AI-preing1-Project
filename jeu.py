@@ -177,8 +177,9 @@ def display(cameraPos, players: [Player]):
                                 screen.blit(platformSprites[platform[1]], (
                                     platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
                             else:
-                                tmpRect = pygame.Rect(platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1], BLOCK_SIZE, BLOCK_SIZE)
-                                pygame.draw.rect(screen, (0,0,255), tmpRect)
+                                tmpRect = pygame.Rect(
+                                    platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1], BLOCK_SIZE, BLOCK_SIZE)
+                                pygame.draw.rect(screen, (0, 0, 255), tmpRect)
 
             # Affichage du compte à rebours de mort du joueur
             colorRect = pygame.Surface((2, 2))
@@ -217,10 +218,10 @@ def display(cameraPos, players: [Player]):
                 (0, 0))  # On affiche l'écran à la taille indiquée
 
 
-def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
-    if player.rect.x < cameraPos[0]:
-        return True
-    return False
+def getFps(clock) -> str:
+    fps = str(int(clock.get_fps()))
+    fps_text = pygame.font.SysFont("Arial", 18).render("fps: " + fps, True, pygame.Color("coral"))
+    return fps_text
 
 
 evolutionController = EvolutionController(
@@ -259,6 +260,9 @@ while running:
 
     # display everything including the player
     display(cameraPos, evolutionController.populationAlive)
+
+    # display fps
+    screen.blit(getFps(clock), (SCREEN_SIZE[0] - 65, 0))
 
     evolutionController.displayText(screen)
 
