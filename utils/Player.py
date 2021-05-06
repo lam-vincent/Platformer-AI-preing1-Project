@@ -1,4 +1,5 @@
 import pygame
+import random
 import math
 import sys
 import numpy as np
@@ -9,10 +10,10 @@ import names
 
 
 class Player(Brain):
-    def __init__(self, posX, posY, name="no_name"):
+    def __init__(self, posX, posY, name="no_name", displaySprites=True):
         Brain.__init__(self)
 
-        self.name = names.get_first_name()
+        self.name = names.get_first_name() if name == "no_name" else name
 
         self.width = 47
         self.height = 65
@@ -62,6 +63,8 @@ class Player(Brain):
         self.fallSprites = self.loadKnightSprites("fall", 3)
         self.dashSprites = self.loadKnightSprites("dash", 7)
         self.deathSprites = self.loadKnightSprites("death", 15)
+
+        self.displaySprites = displaySprites
 
         self.font = pygame.font.Font(None, math.floor(
             44 * ((ACTUAL_SCREEN_SIZE[0] + ACTUAL_SCREEN_SIZE[1])/2)/((700 + 500)/2)))
@@ -177,65 +180,70 @@ class Player(Brain):
         if self.dead:
             self.handleDeath(screen)
         else:
-            self.spriteAnimationLoop()
+            if self.displaySprites:
+                self.spriteAnimationLoop()
 
-            # Traitement à part des sprites de la phase de dash horizontale où le joueur prend de la vitesse
-            if self.xDashCD >= 48 * (MAX_FPS // 60):
-                # S'il va vers la gauche ou regarde vers la gauche
-                if self.movement[0] < 0 or self.lastDirection == "left":
-                    # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
-                    screen.blit(pygame.transform.flip(self.dashSprites[math.floor((MAX_FPS - self.xDashCD) / (
-                        MAX_FPS / 30))], True, False), (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+                # Traitement à part des sprites de la phase de dash horizontale où le joueur prend de la vitesse
+                if self.xDashCD >= 48 * (MAX_FPS // 60):
+                    # S'il va vers la gauche ou regarde vers la gauche
+                    if self.movement[0] < 0 or self.lastDirection == "left":
+                        # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
+                        screen.blit(pygame.transform.flip(self.dashSprites[math.floor((MAX_FPS - self.xDashCD) / (
+                            MAX_FPS / 30))], True, False), (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+                    else:
+                        screen.blit(self.dashSprites[math.floor((MAX_FPS - self.xDashCD) / (
+                            MAX_FPS / 30))], (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+                elif not self.onGround and self.yDashCD > 0 and self.ySpeed <= 0:
+                    if self.yDashCount + 2 <= 12:
+                        self.yDashCount += 2
+                    if self.movement[0] < 0 or self.lastDirection == "left":
+                        # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
+                        screen.blit(pygame.transform.flip(
+                            self.dashSprites[self.yDashCount // 2], True, False), (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+                    else:
+                        screen.blit(self.dashSprites[self.yDashCount // 2],
+                                    (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
                 else:
-                    screen.blit(self.dashSprites[math.floor((MAX_FPS - self.xDashCD) / (
-                        MAX_FPS / 30))], (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
-            elif not self.onGround and self.yDashCD > 0 and self.ySpeed <= 0:
-                if self.yDashCount + 2 <= 12:
-                    self.yDashCount += 2
-                if self.movement[0] < 0 or self.lastDirection == "left":
-                    # Divison euclidienne par 2 pour que les sprites de dash rentrent bien dans les temps
-                    screen.blit(pygame.transform.flip(
-                        self.dashSprites[self.yDashCount // 2], True, False), (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
-                else:
-                    screen.blit(self.dashSprites[self.yDashCount // 2],
-                                (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+                    # Choix des sprites idle ou walk selon sa vitesse horizontale
+                    if not self.onGround:
+                        if self.ySpeed <= 0:
+                            usedSprites = self.jumpSprites
+                            usedCount = self.jumpCount
+                        else:
+                            usedSprites = self.fallSprites
+                            usedCount = self.fallCount
+                    elif self.movement[0] == 0:
+                        # On utilise une variable qu'on fera varier selon les cas, pour éviter de réécrire la fonction qu'on va appeler plusieurs fois
+                        usedSprites = self.idleSprites
+                        usedCount = self.idleCount
+                    else:
+                        usedSprites = self.walkSprites
+                        usedCount = self.walkCount
+
+                    # Affichage des sprites, on inverse la sprite s'il regarde à gauche
+                    # S'il va vers la gauche ou regarde vers la gauche
+                    if self.movement[0] < 0 or self.lastDirection == "left":
+                        # Divison euclidienne par 5 pour qu'il y ait une sprite toutes les 5 frames, soit un framerate d'animation à 12FPS (60 / 5)
+                        screen.blit(pygame.transform.flip(
+                            usedSprites[usedCount // ANIMATION_REFRESH_RATE], True, False), (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+                    else:
+                        screen.blit(usedSprites[usedCount // ANIMATION_REFRESH_RATE],
+                                    (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
+
+                    # On ajoute 1 au compteur de frame
+                    if not self.onGround:
+                        if self.ySpeed <= 0:
+                            self.jumpCount += 1
+                        else:
+                            self.fallCount += 1
+                    elif self.movement[0] == 0:
+                        self.idleCount += 1
+                    else:
+                        self.walkCount += 1
             else:
-                # Choix des sprites idle ou walk selon sa vitesse horizontale
-                if not self.onGround:
-                    if self.ySpeed <= 0:
-                        usedSprites = self.jumpSprites
-                        usedCount = self.jumpCount
-                    else:
-                        usedSprites = self.fallSprites
-                        usedCount = self.fallCount
-                elif self.movement[0] == 0:
-                    # On utilise une variable qu'on fera varier selon les cas, pour éviter de réécrire la fonction qu'on va appeler plusieurs fois
-                    usedSprites = self.idleSprites
-                    usedCount = self.idleCount
-                else:
-                    usedSprites = self.walkSprites
-                    usedCount = self.walkCount
-
-                # Affichage des sprites, on inverse la sprite s'il regarde à gauche
-                # S'il va vers la gauche ou regarde vers la gauche
-                if self.movement[0] < 0 or self.lastDirection == "left":
-                    # Divison euclidienne par 5 pour qu'il y ait une sprite toutes les 5 frames, soit un framerate d'animation à 12FPS (60 / 5)
-                    screen.blit(pygame.transform.flip(
-                        usedSprites[usedCount // ANIMATION_REFRESH_RATE], True, False), (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
-                else:
-                    screen.blit(usedSprites[usedCount // ANIMATION_REFRESH_RATE],
-                                (self.rect.x - cameraPos[0], self.rect.y - cameraPos[1]))
-
-                # On ajoute 1 au compteur de frame
-                if not self.onGround:
-                    if self.ySpeed <= 0:
-                        self.jumpCount += 1
-                    else:
-                        self.fallCount += 1
-                elif self.movement[0] == 0:
-                    self.idleCount += 1
-                else:
-                    self.walkCount += 1
+                displayedRect = pygame.Rect(
+                    self.rect.x - cameraPos[0], self.rect.y - cameraPos[1], self.width, self.height)
+                pygame.draw.rect(screen, (255, 0, 0), displayedRect)
 
     def update(self, platformHitboxes):
         # On applique la gravité au joueur

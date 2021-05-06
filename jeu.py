@@ -218,7 +218,7 @@ def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
         return True
     return False
 
-evolutionController = EvolutionController()
+evolutionController = EvolutionController(taillePopulation=50, displaySprites=False)
 evolutionController.generateFirstPopulation()
 
 running = True
