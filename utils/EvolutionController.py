@@ -2,6 +2,7 @@ from utils.Player import Player
 from utils.settings import *
 import pygame
 import math
+import sys
 
 
 class EvolutionController:
@@ -51,14 +52,55 @@ class EvolutionController:
         deadPlayer = self.populationAlive.pop(index)
         self.populationDead.append(deadPlayer)
 
+    def sortPopulationByScore(self, populationArray: [Player]):
+        ''' sort either populationAlive or populationDead by score '''
+        populationArray.sort(key=lambda x: x.score, reverse=True)
+
+    def selectBestPlayers(self) -> [Player]:
+        ''' returns the n best player defined by self.taillePopulationBest '''
+        bestPlayers = []
+        self.sortPopulationByScore(self.populationDead)
+        for i in range(self.taillePopulationBest):
+            bestPlayers.append(bestPlayers.append(self.populationDead[i]))
+        return bestPlayers
+
+    def mutateWeights(self, weigths):
+        print(weigths)
+        return weigths
+
+    def mutate(self, selectedBestPlayers) -> [Player]:
+        mutatedPopulation = []
+        if self.taillePopulationMutate < self.taillePopulationBest:
+            print("Le nombre de fils mutés doit être supérieur ou égal au nombre de bestJoueurs sélectionné (self.taillePopulationBest<self.taillePopulationMutate)")
+            sys.exit()
+
+        numberChildPerBestPlayer: int = self.taillePopulationMutate // self.taillePopulationBest
+        numberRemainderChild: int = self.taillePopulationMutate % self.taillePopulationBest
+
+        for bestPlayer in selectedBestPlayers:
+            for i in range(numberChildPerBestPlayer):
+                weigths = bestPlayer.getWeights()
+                weigths = self.mutateWeights(weigths)
+                print(f"weigths : {weigths}")
+                tmpPlayer = Player(
+                    350, -1000, displaySprites=self.displaySprites)
+                tmpPlayer.setWeights(weights)
+                mutatedPopulation.append(tmpPlayer)
+
+        for i in range(numberRemainderChild):
+            weigths = selectedBestPlayers[0].getWeights()
+            weigths = self.mutateWeights(weigths)
+            tmpPlayer = Player(
+                350, -1000, displaySprites=self.displaySprites)
+            tmpPlayer.setWeights(weights)
+            mutatedPopulation.append(tmpPlayer)
+
+        return mutatedPopulation
+
     def startNextGeneration(self):
-        bestPlayer = self.getBestPlayer()
+        bestPlayers = self.selectBestPlayers()
+        mutatedPlayers = self.mutate(bestPlayers)
 
-        self.populationAlive.append(bestPlayer)
-        while len(self.populationAlive) <= self.taillePopulation:
-            self.populationAlive.append(Player(350, -1000, displaySprites=self.displaySprites))
-
-        self.generation += 1
         self.populationDead.clear()
 
         print(
@@ -73,8 +115,7 @@ class EvolutionController:
             "Alive: " + str(self.getNumberOfAlive()), True, (255, 0, 0))
         screen.blit(aliveText, (0, 20))
 
-        self.populationAlive.sort(
-            key=lambda x: x.score, reverse=True)  # sort by score
+        self.sortPopulationByScore(self.populationAlive)
 
         for index, player in enumerate(self.populationAlive):
             if(index > 20):

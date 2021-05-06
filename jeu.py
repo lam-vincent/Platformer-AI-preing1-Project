@@ -220,12 +220,13 @@ def display(cameraPos, players: [Player]):
 
 def getFps(clock) -> str:
     fps = str(int(clock.get_fps()))
-    fps_text = pygame.font.SysFont("Arial", 18).render("fps: " + fps, True, pygame.Color("coral"))
+    fps_text = pygame.font.SysFont("Arial", 18).render(
+        "fps: " + fps, True, pygame.Color("coral"))
     return fps_text
 
 
 evolutionController = EvolutionController(
-    displaySprites=DISPLAY_SPRITES, taillePopulation=50)
+    displaySprites=DISPLAY_SPRITES, taillePopulation=20)
 evolutionController.generateFirstPopulation()
 
 running = True

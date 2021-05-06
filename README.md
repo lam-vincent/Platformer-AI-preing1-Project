@@ -21,4 +21,13 @@ Un point à creuser : jeux de plateau et de stratégie tour-par-tour
 ## Todo 
 
 - [ ] Fonction de sélection, reproduction/mutation
-- [ ] Enlever les textures des platformes
+- [ ] Fix le dash qui caste tout le temps le double dash
+- [ ] Enregistrer les weights et les poids du meilleur joueur dans un fichier
+- [x] Enlever les textures des platformes
+
+## IA inputs
+
+- distance du prochain vide 
+- taille du prochain vide
+- distance vers le prochain block en face 
+- si touche le sol ou non ?
