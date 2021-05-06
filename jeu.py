@@ -173,8 +173,12 @@ def display(cameraPos, players: [Player]):
                     targetChunk = str(chunkX) + ";" + str(chunkY)
                     for platform in gameMap[targetChunk]:
                         if platform[1] > 0:
-                            screen.blit(platformSprites[platform[1]], (
-                                platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
+                            if DISPLAY_SPRITES:
+                                screen.blit(platformSprites[platform[1]], (
+                                    platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1]))
+                            else:
+                                tmpRect = pygame.Rect(platform[0][0] * BLOCK_SIZE - cameraPos[0], platform[0][1] * BLOCK_SIZE - cameraPos[1], BLOCK_SIZE, BLOCK_SIZE)
+                                pygame.draw.rect(screen, (0,0,255), tmpRect)
 
             # Affichage du compte à rebours de mort du joueur
             colorRect = pygame.Surface((2, 2))
@@ -218,13 +222,14 @@ def isOutOfTheScreen(player: Player, cameraPos: [int]) -> bool:
         return True
     return False
 
-evolutionController = EvolutionController(taillePopulation=50, displaySprites=False)
+
+evolutionController = EvolutionController(
+    displaySprites=DISPLAY_SPRITES, taillePopulation=50)
 evolutionController.generateFirstPopulation()
 
 running = True
 while running:
     screen.fill(DARK_GREY)
-
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -239,7 +244,6 @@ while running:
     for index, player in enumerate(evolutionController.populationAlive):
         if player.dead:
             evolutionController.killPlayer(index)
-            
 
     # Plateformes & Chunks
     platformHitboxes = handlePlatform(
@@ -248,12 +252,13 @@ while running:
     for player in evolutionController.populationAlive:
         player.eventHandler()  # handle input for player
         player.update(platformHitboxes)  # handle physics and collision
-        
+
     if evolutionController.allPlayerAreDead():
         evolutionController.startNextGeneration()
-        cameraPos = trueCameraPos 
+        cameraPos = trueCameraPos
 
-    display(cameraPos, evolutionController.populationAlive)  # display everything including the player
+    # display everything including the player
+    display(cameraPos, evolutionController.populationAlive)
 
     evolutionController.displayText(screen)
 
