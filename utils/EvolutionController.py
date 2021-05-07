@@ -61,12 +61,11 @@ class EvolutionController:
         bestPlayers = []
         self.sortPopulationByScore(self.populationDead)
         for i in range(self.taillePopulationBest):
-            bestPlayers.append(bestPlayers.append(self.populationDead[i]))
+            bestPlayers.append(self.populationDead[i])
         return bestPlayers
 
-    def mutateWeights(self, weigths):
-        print(weigths)
-        return weigths
+    def mutateWeights(self, weights):
+        return weights
 
     def mutate(self, selectedBestPlayers) -> [Player]:
         mutatedPopulation = []
@@ -79,17 +78,16 @@ class EvolutionController:
 
         for bestPlayer in selectedBestPlayers:
             for i in range(numberChildPerBestPlayer):
-                weigths = bestPlayer.getWeights()
-                weigths = self.mutateWeights(weigths)
-                print(f"weigths : {weigths}")
+                weights = bestPlayer.getWeights()
+                weights = self.mutateWeights(weights)
                 tmpPlayer = Player(
                     350, -1000, displaySprites=self.displaySprites)
                 tmpPlayer.setWeights(weights)
                 mutatedPopulation.append(tmpPlayer)
 
         for i in range(numberRemainderChild):
-            weigths = selectedBestPlayers[0].getWeights()
-            weigths = self.mutateWeights(weigths)
+            weights = selectedBestPlayers[0].getWeights()
+            weights = self.mutateWeights(weights)
             tmpPlayer = Player(
                 350, -1000, displaySprites=self.displaySprites)
             tmpPlayer.setWeights(weights)
@@ -100,8 +98,19 @@ class EvolutionController:
     def startNextGeneration(self):
         bestPlayers = self.selectBestPlayers()
         mutatedPlayers = self.mutate(bestPlayers)
-
         self.populationDead.clear()
+
+        for player in bestPlayers:
+            self.populationAlive.append(player)
+
+        for player in mutatedPlayers:
+            self.populationAlive.append(player)
+
+        while self.getNumberOfAlive() <= self.taillePopulation:
+            self.populationAlive.append(
+                Player(350, -1000, displaySprites=self.displaySprites))
+
+        print(f"score fisrt player : {self.populationAlive[0].score}")
 
         print(
             f"Generation {self.generation}   -   player alive : {self.getNumberOfAlive()}")
