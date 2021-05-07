@@ -61,7 +61,8 @@ class EvolutionController:
         bestPlayers = []
         self.sortPopulationByScore(self.populationDead)
         for i in range(self.taillePopulationBest):
-            bestPlayers.append(self.populationDead[i])
+            best = self.populationDead[i]
+            bestPlayers.append(best)
         return bestPlayers
 
     def mutateWeights(self, weights):
@@ -95,10 +96,6 @@ class EvolutionController:
 
         return mutatedPopulation
 
-    def resetAllPlayersStats(self):
-        for i in range(self.getNumberOfAlive()):
-            self.populationAlive[i].resetScoreStats()
-
     def startNextGeneration(self):
         self.generation += 1
         bestPlayers = self.selectBestPlayers()
@@ -106,16 +103,24 @@ class EvolutionController:
         self.populationDead.clear()
 
         for player in bestPlayers:
-            self.populationAlive.append(player)
+            weights = player.getWeights()
+            oldName = player.name
+
+            newPlayer = Player(350, -1000, name=oldName,
+                               displaySprites=self.displaySprites)
+            newPlayer.setWeights(weights)
+            newPlayer.bestPlayer = True
+
+            self.populationAlive.append(newPlayer)
 
         for player in mutatedPlayers:
-            self.populationAlive.append(player)
+            tmpPlayer = player
+            tmpPlayer.mutatedPlayer = True
+            self.populationAlive.append(tmpPlayer)
 
         while self.getNumberOfAlive() <= self.taillePopulation:
             self.populationAlive.append(
                 Player(350, -1000, displaySprites=self.displaySprites))
-
-        self.resetAllPlayersStats()
 
     def displayText(self, screen):
         generationText = self.font.render(
@@ -129,8 +134,16 @@ class EvolutionController:
         self.sortPopulationByScore(self.populationAlive)
 
         for index, player in enumerate(self.populationAlive):
-            if(index > 20):
+            if(index > 30):
                 break
-            txt = self.font_sm.render(str(
-                index+1) + " - " + player.name + " : " + str(round(player.score)), True, (255, 0, 0))
+            if player.bestPlayer:
+                txt = self.font_sm.render(str(
+                    index+1) + " - " + player.name + " : " + str(round(player.score)), True, (255, 0, 0))
+            elif player.mutatedPlayer:
+                txt = self.font_sm.render(str(
+                    index+1) + " - " + player.name + " : " + str(round(player.score)), True, (0, 255, 0))
+            else:
+                txt = self.font_sm.render(str(
+                    index+1) + " - " + player.name + " : " + str(round(player.score)), True, (0, 0, 255))
+
             screen.blit(txt, (0, 50 + index * 15))
