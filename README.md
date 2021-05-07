@@ -1,6 +1,6 @@
 # Platformer-AI-preing1-Project
 
-![gif](assets/gif/gif1.gif)
+![gif](assets/gif/gif2.gif)
 
 Comparaison de plusieurs IA sur un même jeu ?
 Comparaison de plusieurs IA sur plusieurs jeux d'une même famille ?

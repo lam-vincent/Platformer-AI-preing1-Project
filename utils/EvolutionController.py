@@ -116,7 +116,7 @@ class EvolutionController:
             tmpPlayer.mutatedPlayer = True
             self.populationAlive.append(tmpPlayer)
 
-        while self.getNumberOfAlive() <= self.taillePopulation:
+        while self.getNumberOfAlive() < self.taillePopulation:
             self.populationAlive.append(
                 Player(displaySprites=self.displaySprites))
 
