@@ -21,8 +21,8 @@ Un point à creuser : jeux de plateau et de stratégie tour-par-tour
 
 - [ ] Fix le dash qui caste tout le temps le double dash
 - [ ] Enregistrer les weights et les poids du meilleur joueur dans un fichier
-- [ ] Faire un système de couleur dans le leaderboard pour les bot best mutated et random
-- [ ] Fix le système des noms
+- [x] Faire un système de couleur dans le leaderboard pour les bot best mutated et random
+- [x] Fix le système des noms
 - [x] Enlever les textures des platformes
 - [x] Fonction de sélection, reproduction/mutation
 - [x] Fix le reset des variables des joueurs quand on les fait respawns
