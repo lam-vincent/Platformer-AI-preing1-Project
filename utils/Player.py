@@ -10,7 +10,7 @@ import names
 
 
 class Player(Brain):
-    def __init__(self, posX, posY, name="no_name", displaySprites=True):
+    def __init__(self, name="no_name", displaySprites=True):
         Brain.__init__(self)
 
         self.name = names.get_first_name() if name == "no_name" else name
@@ -24,7 +24,7 @@ class Player(Brain):
         self.previousSecond = -1
 
         # Hitbox du joueur (au passage on récupèrera les coordonnées du rect pour récupérer les coordonnées du joueur)
-        self.rect = pygame.Rect(posX, posY, self.width, self.height)
+        self.rect = pygame.Rect(SPAWN_COORD[0], SPAWN_COORD[1], self.width, self.height)
 
         # Vitesse verticale, mouvement du joueur, cooldown des dash
         self.ySpeed = 0

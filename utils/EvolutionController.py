@@ -40,7 +40,7 @@ class EvolutionController:
         ''' generate a population of player of size taillePopulation '''
         for i in range(self.taillePopulation):
             self.populationAlive.append(
-                Player(350, -1000, displaySprites=self.displaySprites))
+                Player(displaySprites=self.displaySprites))
 
     def allPlayerAreDead(self) -> bool:
         if self.getNumberOfAlive():
@@ -81,16 +81,14 @@ class EvolutionController:
             for i in range(numberChildPerBestPlayer):
                 weights = bestPlayer.getWeights()
                 weights = self.mutateWeights(weights)
-                tmpPlayer = Player(
-                    350, -1000, displaySprites=self.displaySprites)
+                tmpPlayer = Player(displaySprites=self.displaySprites)
                 tmpPlayer.setWeights(weights)
                 mutatedPopulation.append(tmpPlayer)
 
         for i in range(numberRemainderChild):
             weights = selectedBestPlayers[0].getWeights()
             weights = self.mutateWeights(weights)
-            tmpPlayer = Player(
-                350, -1000, displaySprites=self.displaySprites)
+            tmpPlayer = Player(displaySprites=self.displaySprites)
             tmpPlayer.setWeights(weights)
             mutatedPopulation.append(tmpPlayer)
 
@@ -106,8 +104,8 @@ class EvolutionController:
             weights = player.getWeights()
             oldName = player.name
 
-            newPlayer = Player(350, -1000, name=oldName,
-                               displaySprites=self.displaySprites)
+            newPlayer = Player(
+                name=oldName, displaySprites=self.displaySprites)
             newPlayer.setWeights(weights)
             newPlayer.bestPlayer = True
 
@@ -120,7 +118,7 @@ class EvolutionController:
 
         while self.getNumberOfAlive() <= self.taillePopulation:
             self.populationAlive.append(
-                Player(350, -1000, displaySprites=self.displaySprites))
+                Player(displaySprites=self.displaySprites))
 
     def displayText(self, screen):
         generationText = self.font.render(
