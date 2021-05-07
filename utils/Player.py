@@ -70,7 +70,10 @@ class Player(Brain):
             44 * ((ACTUAL_SCREEN_SIZE[0] + ACTUAL_SCREEN_SIZE[1])/2)/((700 + 500)/2)))
 
         self.mixer = pygame.mixer
-        # Fonction pour jouer des sons
+
+        # utilisé pour les couleurs dans le leaderboard
+        self.bestPlayer = False
+        self.mutatedPlayer = False
 
     def sound(self, name):
         if not self.dead:  # On ne veut pas qu'un son se joue si le joueur est dans l'écran de mort
@@ -121,10 +124,6 @@ class Player(Brain):
                 collisionTypes['top'] = True
 
         return collisionTypes
-
-    def resetScoreStats(self):
-        self.score = 0
-        self.xMax = 0
 
     def collisionTest(self, platforms):
         hitList = []
@@ -404,3 +403,6 @@ class Player(Brain):
                 self.yDashCD = self.xDashCD
                 self.canActivateArrows[1] = False
                 self.sound("dashY")
+
+    def __str__(self):
+        return self.name
