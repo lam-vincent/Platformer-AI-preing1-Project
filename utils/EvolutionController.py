@@ -12,7 +12,7 @@ class EvolutionController:
         self.taillePopulationBest = taillePopulationBest
         self.taillePopulationRandom = self.getTaillePopulationRandom()
 
-        self.generation = 0
+        self.generation = 1
 
         self.populationAlive = []
         self.populationDead = []
@@ -95,7 +95,12 @@ class EvolutionController:
 
         return mutatedPopulation
 
+    def resetAllPlayersStats(self):
+        for i in range(self.getNumberOfAlive()):
+            self.populationAlive[i].resetScoreStats()
+
     def startNextGeneration(self):
+        self.generation += 1
         bestPlayers = self.selectBestPlayers()
         mutatedPlayers = self.mutate(bestPlayers)
         self.populationDead.clear()
@@ -110,10 +115,7 @@ class EvolutionController:
             self.populationAlive.append(
                 Player(350, -1000, displaySprites=self.displaySprites))
 
-        print(f"score fisrt player : {self.populationAlive[0].score}")
-
-        print(
-            f"Generation {self.generation}   -   player alive : {self.getNumberOfAlive()}")
+        self.resetAllPlayersStats()
 
     def displayText(self, screen):
         generationText = self.font.render(

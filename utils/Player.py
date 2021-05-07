@@ -122,6 +122,10 @@ class Player(Brain):
 
         return collisionTypes
 
+    def resetScoreStats(self):
+        self.score = 0
+        self.xMax = 0
+
     def collisionTest(self, platforms):
         hitList = []
         for platform in platforms:
