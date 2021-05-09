@@ -1,5 +1,6 @@
 from utils.Player import Player
 from utils.settings import *
+import numpy as np
 import pygame
 import math
 import sys
@@ -65,8 +66,30 @@ class EvolutionController:
             bestPlayers.append(best)
         return bestPlayers
 
+    def getMutationValues(self, shape):
+        ''' get mutation values to mutate numpy array '''
+        # we mutate by a value between 0 and 1
+        uniformArray = np.random.uniform(low=0, high=0.1, size=shape)
+
+        # we don't keep all the value of the array  so we get statistics
+        probaArray = np.random.uniform(low=0, high=1, size=shape)
+        # if the stat generated is superior to NUMBER_MUTATED_WEIGHTS then we
+        # keep the value
+        coef = np.where(probaArray > NUMBER_MUTATED_WEIGHTS, 0, 1)
+        res = uniformArray * coef
+
+        # we multiply by -1 certain values
+        probaArray = np.random.uniform(low=0, high=1, size=shape)
+        coef = np.where(probaArray > 0.5, 1, -1)
+        res = res * coef
+        return res
+
     def mutateWeights(self, weights):
-        return weights
+        res = []
+        for arr in weights:
+            mutatedWeights = arr + self.getMutationValues(arr.shape)
+            res.append(mutatedWeights)
+        return res
 
     def mutate(self, selectedBestPlayers) -> [Player]:
         mutatedPopulation = []
