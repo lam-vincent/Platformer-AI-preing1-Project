@@ -274,7 +274,7 @@ class Player(Brain):
         self.movement[1] += self.ySpeed
 
         collisions = self.move(platformHitboxes)
-
+        """
         decision = self.makeDecision(collisions)
 
         if decision == 0:
@@ -302,6 +302,7 @@ class Player(Brain):
                 self.walkSoundCount = 0
                 self.onGround = False
                 self.sound("jump")
+        """
 
         if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
             self.ySpeed = 0

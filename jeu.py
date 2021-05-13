@@ -152,6 +152,26 @@ def stillPlayersAlive(players: [Player]) -> bool:
     return len(players) != 0
 
 
+def getPlatformCoord(platformHitboxes):
+    coord = []
+    for rect in platformHitboxes:
+        coord.append(rect.topleft)
+    return coord
+
+
+def getPlayerHeightFromGround(player: Player, platformHitboxes):
+    player_x = player.rect.x
+    player_bottom = player.rect.bottom
+    platformCoord = getPlatformCoord(platformHitboxes)
+    minDistance =  abs(platformCoord[0][0] - player_x)
+    selectedPlatformCoord = (platformCoord[0], platformCoord[1])
+    for coord in platformCoord:
+        if abs(coord[0] - player_x) < minDistance:
+            minDistance = abs(coord[0] - player_x)
+            selectedPlatformCoord = coord
+    
+    return abs(player_bottom - selectedPlatformCoord[1])
+
 def display(cameraPos, players: [Player]):
     # On global player pour modifier (uniquement les compteurs de frames)
     # Affichage des plateformes
@@ -226,7 +246,7 @@ def getFps(clock) -> str:
 
 
 evolutionController = EvolutionController(
-    displaySprites=DISPLAY_SPRITES, taillePopulation=20)
+    displaySprites=DISPLAY_SPRITES, taillePopulation=1, taillePopulationMutate=0)
 evolutionController.generateFirstPopulation()
 
 running = True
@@ -250,6 +270,9 @@ while running:
     # Plateformes & Chunks
     platformHitboxes = handlePlatform(
         cameraPos, best_xMax_player)  # handleCollision and create platforms
+
+    print(
+        f"player height : {getPlayerHeightFromGround(evolutionController.populationAlive[0],platformHitboxes)}")
 
     for player in evolutionController.populationAlive:
         player.eventHandler()  # handle input for player
