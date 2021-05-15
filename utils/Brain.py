@@ -6,7 +6,7 @@ from keras.layers import Dense
 class Brain:
     def __init__(self):
         self.model = Sequential()
-        self.model.add(Dense(8, input_dim=4, activation='relu'))
+        self.model.add(Dense(8, input_dim=3, activation='relu'))
         self.model.add(Dense(3, activation='softmax'))
 
     def getWeights(self):
@@ -39,10 +39,12 @@ class Brain:
 
         return np.array(res)
 
-    def makeDecision(self, collisions: [int]) -> int:
+    def makeDecision(self, distanceFromGround, distanceFromWall, distanceFromHole) -> int:
         ''' return a decision which is a number between 0 and 2 '''
-        prediction = self.model(
-            self.getArrayFromDict(collisions), training=False)
+        input_arr = np.array(
+            [distanceFromGround, distanceFromWall, distanceFromHole])
+        input_arr = np.expand_dims(input_arr, axis=0)
+        prediction = self.model(input_arr)
         prediction = np.array(prediction)
         prediction = np.squeeze(prediction)
         decision = self.indexMaxValue(prediction)

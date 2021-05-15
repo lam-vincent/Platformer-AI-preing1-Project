@@ -169,10 +169,22 @@ def getPlayerHeightFromGround(player: Player, platformHitboxes):
             minDistance = abs(coord[0] - player_bottom)
             selectedPlatformCoord = coord
 
-    res = abs(player_bottom - selectedPlatformCoord[1])
-    if res > 200:
-        return 200
-    return res
+    if minDistance > 200:
+        minDistance = 200
+    return 1 - minDistance/200
+
+
+def getPlayerDistanceToNextHole(player: Player):
+    player_right = player.rect.center[0] + BLOCK_SIZE / 2
+    minDistance = 100000
+    for chunk in gameMap.values():
+        for tile in chunk:
+            if tile[1] == -1:
+                if (tile[0][0] * BLOCK_SIZE - player_right) < minDistance and (tile[0][0] * BLOCK_SIZE - player_right) > 0:
+                    minDistance = tile[0][0] * BLOCK_SIZE - player_right
+    if minDistance > 600:
+        minDistance = 600
+    return 1 - minDistance / 600
 
 
 def getPlayerDistanceFromNextBloc(player: Player, platformHitboxes):
@@ -189,9 +201,9 @@ def getPlayerDistanceFromNextBloc(player: Player, platformHitboxes):
                 selectedPlatformCoord = coord
 
     res = abs(selectedPlatformCoord[0] - player_right)
-    if res > 400:
-        res = 400
-    return res
+    if res > 80:
+        res = 80
+    return 1 - res / 80
 
 
 def display(cameraPos, players: [Player]):
@@ -268,7 +280,7 @@ def getFps(clock) -> str:
 
 
 evolutionController = EvolutionController(
-    displaySprites=DISPLAY_SPRITES, taillePopulation=1, taillePopulationMutate=0)
+    displaySprites=DISPLAY_SPRITES, taillePopulation=20, taillePopulationMutate=8)
 evolutionController.generateFirstPopulation()
 
 running = True
@@ -293,10 +305,14 @@ while running:
     platformHitboxes = handlePlatform(
         cameraPos, best_xMax_player)  # handleCollision and create platforms
 
-    print(
-        f"player distance from wall : {getPlayerDistanceFromNextBloc(evolutionController.populationAlive[0], platformHitboxes)}")
-
     for player in evolutionController.populationAlive:
+        distanceFromGround = getPlayerHeightFromGround(
+            player, platformHitboxes)
+        distanceFromWall = getPlayerDistanceFromNextBloc(
+            player, platformHitboxes)
+        distanceFromHole = getPlayerDistanceToNextHole(player)
+        player.decision = player.makeDecision(
+            distanceFromGround, distanceFromWall, distanceFromHole)
         player.eventHandler()  # handle input for player
         player.update(platformHitboxes)  # handle physics and collision
 

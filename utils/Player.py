@@ -24,7 +24,8 @@ class Player(Brain):
         self.previousSecond = -1
 
         # Hitbox du joueur (au passage on récupèrera les coordonnées du rect pour récupérer les coordonnées du joueur)
-        self.rect = pygame.Rect(SPAWN_COORD[0], SPAWN_COORD[1], self.width, self.height)
+        self.rect = pygame.Rect(
+            SPAWN_COORD[0], SPAWN_COORD[1], self.width, self.height)
 
         # Vitesse verticale, mouvement du joueur, cooldown des dash
         self.ySpeed = 0
@@ -74,6 +75,7 @@ class Player(Brain):
         # utilisé pour les couleurs dans le leaderboard
         self.bestPlayer = False
         self.mutatedPlayer = False
+        self.decision = 1
 
     def sound(self, name):
         if not self.dead:  # On ne veut pas qu'un son se joue si le joueur est dans l'écran de mort
@@ -274,10 +276,18 @@ class Player(Brain):
         self.movement[1] += self.ySpeed
 
         collisions = self.move(platformHitboxes)
-        """
-        decision = self.makeDecision(collisions)
 
-        if decision == 0:
+        if self.decision == 0:
+            if self.onGround and self.airTime < 6:
+                self.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
+                self.walkCount = 0
+                self.walkSoundCount = 0
+                self.onGround = False
+                self.sound("jump")
+        elif self.decision == 1:
+            self.movement[0] = 4
+            self.lastDirection = "right"
+        else:
             if self.xDashCD == 0 and self.movement[0] != 0 and self.canXDash and not self.onGround:
                 if self.movement[0] < 0:
                     self.movement[0] = -10
@@ -292,17 +302,6 @@ class Player(Brain):
                 self.yDashCD = self.xDashCD
                 self.canActivateArrows[1] = False
                 self.sound("dashY")
-        elif decision == 1:
-            self.movement[0] = 4
-            self.lastDirection = "right"
-        else:
-            if self.onGround and self.airTime < 6:
-                self.ySpeed = -math.sqrt(2 * JUMP_HEIGHT * ACCELERATION)
-                self.walkCount = 0
-                self.walkSoundCount = 0
-                self.onGround = False
-                self.sound("jump")
-        """
 
         if collisions['bottom']:  # S'il y a eu une collision en bas, on réinitialise toutes les variables de joueurs liées au saut et on lui redonne son dash
             self.ySpeed = 0
