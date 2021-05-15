@@ -160,17 +160,39 @@ def getPlatformCoord(platformHitboxes):
 
 
 def getPlayerHeightFromGround(player: Player, platformHitboxes):
-    player_x = player.rect.x
     player_bottom = player.rect.bottom
     platformCoord = getPlatformCoord(platformHitboxes)
-    minDistance =  abs(platformCoord[0][0] - player_x)
-    selectedPlatformCoord = (platformCoord[0], platformCoord[1])
+    minDistance = abs(platformCoord[0][0] - player_bottom)
+    selectedPlatformCoord = (0, 0)
     for coord in platformCoord:
-        if abs(coord[0] - player_x) < minDistance:
-            minDistance = abs(coord[0] - player_x)
+        if abs(coord[0] - player_bottom) < minDistance:
+            minDistance = abs(coord[0] - player_bottom)
             selectedPlatformCoord = coord
-    
-    return abs(player_bottom - selectedPlatformCoord[1])
+
+    res = abs(player_bottom - selectedPlatformCoord[1])
+    if res > 200:
+        return 200
+    return res
+
+
+def getPlayerDistanceFromNextBloc(player: Player, platformHitboxes):
+    player_right = player.rect.right
+    player_center_y = player.rect.center[1]
+    platformCoord = getPlatformCoord(platformHitboxes)
+    minDistance = 10000000
+    selectedPlatformCoord = (0, 0)
+    for coord in platformCoord:
+        #print(f"coord[1] - player right = {coord[1] - player_right}")
+        if (coord[0] - player_right) < minDistance and (coord[0] - player_right) > 0:
+            if coord[1] < player_center_y < coord[1] + BLOCK_SIZE:
+                minDistance = coord[0] - player_right
+                selectedPlatformCoord = coord
+
+    res = abs(selectedPlatformCoord[0] - player_right)
+    if res > 400:
+        res = 400
+    return res
+
 
 def display(cameraPos, players: [Player]):
     # On global player pour modifier (uniquement les compteurs de frames)
@@ -272,7 +294,7 @@ while running:
         cameraPos, best_xMax_player)  # handleCollision and create platforms
 
     print(
-        f"player height : {getPlayerHeightFromGround(evolutionController.populationAlive[0],platformHitboxes)}")
+        f"player distance from wall : {getPlayerDistanceFromNextBloc(evolutionController.populationAlive[0], platformHitboxes)}")
 
     for player in evolutionController.populationAlive:
         player.eventHandler()  # handle input for player
