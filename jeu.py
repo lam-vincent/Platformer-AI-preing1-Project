@@ -11,7 +11,7 @@ BLOCK_SIZE = 48
 
 ARROW_SIZE = 40
 
-DARK_GREY = (35, 39, 42)
+LIGHT_BLUE = (135, 206, 235)
 DARK_DARK_GREY = (20, 24, 27)
 
 PLAYER_WIDTH = 47
@@ -212,7 +212,7 @@ def display(cameraPos):
             screen.blit(text, ((ACTUAL_SCREEN_SIZE[0] - textSize[0])/2, (ACTUAL_SCREEN_SIZE[1] - textSize[1])/2))
     else:
         # On remplit l'écran de gris foncé pour qu'une frame ne persiste pas sur la frame suivante
-        screen.fill(DARK_GREY)
+        screen.fill(LIGHT_BLUE)
 
         # Affichage du joueur
         # On loop les sprites (comme un GIF quoi)
